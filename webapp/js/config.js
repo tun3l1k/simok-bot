@@ -1,4 +1,6 @@
 // Все числа экономики и контента живут здесь. Меняй и проверяй: npm run sim
+import { FLAGS } from './flags.js';
+
 export const CONFIG = {
   SAVE_KEY: 'simok_save_v1',
   BOT_USERNAME: 'SimOkBot', // имя бота без @
@@ -58,6 +60,32 @@ export const OPERATORS = [
   { id: 'vela', name: 'VELA', c: ['#effcf7', '#b9ecd9', '#7fd1b5'] },
   { id: 'nord', name: 'NORD', c: ['#eef6ff', '#bcd8f6', '#86b4e8'] },
 ];
+
+// Ставки: номер гарантированно не ниже редкости tier. Цена ≈ средняя цена такого номера
+// (пересчитывается через npm run sim, блок «Ставки»), поэтому это быстрый путь к редким номерам, а не халява.
+export const BETS = [
+  { tier: 0, cost: CONFIG.SPIN_COST },
+  { tier: 1, cost: 2200 },
+  { tier: 2, cost: 5300 },
+  { tier: 3, cost: 25000 },
+  { tier: 4, cost: 97000 },
+];
+
+// Страны. Играбельна пока только Россия; операторы каждой страны добавим позже.
+export const COUNTRIES = [
+  { id: 'ru', name: 'Россия', ready: true },
+  { id: 'by', name: 'Беларусь' },
+  { id: 'kz', name: 'Казахстан' },
+  { id: 'ae', name: 'ОАЭ' },
+  { id: 'ab', name: 'Абхазия' },
+  { id: 'ua', name: 'Украина' },
+  { id: 'de', name: 'Германия' },
+  { id: 'az', name: 'Азербайджан' },
+  { id: 'am', name: 'Армения' },
+  { id: 'ge', name: 'Грузия' },
+  { id: 'us', name: 'США' },
+  { id: 'uz', name: 'Узбекистан' },
+].map((c) => ({ ...c, flag: FLAGS[c.id] }));
 
 // Заглушка магазина. Реальная оплата Stars подключается на бэкенде.
 export const SHOP_ITEMS = [

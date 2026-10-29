@@ -1,4 +1,4 @@
-import { CONFIG, AUTO_KEEP, SHOP_ITEMS } from './config.js';
+import { CONFIG, AUTO_KEEP, BETS, COUNTRIES, SHOP_ITEMS } from './config.js';
 import { formatPhone, formatMoney } from './generator.js';
 import { load, save, fresh } from './state.js';
 import * as game from './game.js';
@@ -55,9 +55,37 @@ $('multiBtn').onclick = () => {
   state.multi = o[(o.indexOf(state.multi) + 1) % o.length];
   renderAll();
 };
-$('filterBtn').onclick = () => { state.autoKeep = (state.autoKeep + 1) % AUTO_KEEP.length; renderAll(); };
-$('countryBtn').onclick = () => ui.toast('Другие страны скоро');
+$('autoBtn').onclick = () => { state.autoKeep = (state.autoKeep + 1) % AUTO_KEEP.length; renderAll(); };
 $('tariffsBtn').onclick = () => ui.toast('Тарифы скоро');
+
+// Шторки: закрываются тапом по затемнению
+document.querySelectorAll('dialog.sheet').forEach((d) => d.addEventListener('click', (e) => {
+  if (e.target !== d) return;
+  const r = d.getBoundingClientRect();
+  if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) d.close();
+}));
+
+$('countryBtn').onclick = () => { ui.renderCountrySheet(state); $('countrySheet').showModal(); };
+$('countryGrid').onclick = (e) => {
+  const c = COUNTRIES.find((x) => x.id === e.target.closest('[data-country]')?.dataset.country);
+  if (!c) return;
+  if (!c.ready) { ui.toast(`${c.name}: скоро`); return; }
+  state.country = c.id;
+  haptic();
+  renderAll();
+  $('countrySheet').close();
+};
+$('operList').onclick = () => ui.toast('Операторы страны появятся позже');
+
+$('betBtn').onclick = () => { ui.renderBetSheet(state); $('betSheet').showModal(); };
+$('betList').onclick = (e) => {
+  const i = Number(e.target.closest('[data-bet]')?.dataset.bet);
+  if (!BETS[i]) return;
+  state.bet = i;
+  haptic();
+  renderAll();
+  $('betSheet').close();
+};
 
 $('keepBtn').onclick = () => {
   if (game.keepPending(state)) { view = { ...view, kept: true }; haptic(); renderAll(); }

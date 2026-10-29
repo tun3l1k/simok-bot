@@ -1,5 +1,8 @@
-import { CONFIG, AUTO_KEEP, xpForLevel, levelReward } from './config.js';
-import { roll } from './generator.js';
+import { CONFIG, AUTO_KEEP, BETS, xpForLevel, levelReward } from './config.js';
+import { roll, rollMin } from './generator.js';
+
+export const currentBet = (s) => BETS[s.bet] ?? BETS[0];
+export const spinCost = (s, count = s.multi) => currentBet(s).cost * count;
 
 export const collectionValue = (s) => s.collection.reduce((a, x) => a + x.price, 0);
 
@@ -19,6 +22,12 @@ export function bailout(s) {
   return true;
 }
 
+// Удача работает только на обычной крутке, ставка с гарантией её не тратит
+function rollOne(s) {
+  const bet = currentBet(s);
+  return bet.tier ? rollMin(bet.tier) : rollWithLuck(s);
+}
+
 function rollWithLuck(s) {
   if (s.luck <= 0) return roll();
   s.luck--;
@@ -32,16 +41,18 @@ function rollWithLuck(s) {
 }
 
 export function spin(s, count) {
-  const cost = CONFIG.SPIN_COST * count;
+  const cost = spinCost(s, count);
   const pendingPrice = s.pending ? s.pending.price : 0;
-  if (s.balance + pendingPrice < cost) return { error: 'Не хватает денег. Продай что-нибудь из коллекции.' };
+  if (s.balance + pendingPrice < cost) {
+    return { error: s.bet ? 'Не хватает денег на эту ставку. Выбери ставку дешевле или продай номер.' : 'Не хватает денег. Продай что-нибудь из коллекции.' };
+  }
 
   s.balance += pendingPrice - cost; // прошлый номер продаётся автоматически
   s.pending = null;
 
   let best = null, autoSold = 0, luckUsed = 0;
   for (let i = 0; i < count; i++) {
-    const it = rollWithLuck(s);
+    const it = rollOne(s);
     if (it.lucky) luckUsed++;
     if (!best) { best = it; continue; }
     const [keep, drop] = it.price > best.price ? [it, best] : [best, it];

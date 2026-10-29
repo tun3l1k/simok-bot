@@ -1,6 +1,8 @@
-import { CONFIG, TIERS, OPERATORS, AUTO_KEEP, SHOP_ITEMS, xpForLevel } from './config.js';
+import { CONFIG, TIERS, OPERATORS, AUTO_KEEP, BETS, COUNTRIES, SHOP_ITEMS, xpForLevel } from './config.js';
 import { formatPhone, formatMoney, formatMult } from './generator.js';
-import { collectionValue } from './game.js';
+import { collectionValue, currentBet, spinCost } from './game.js';
+
+export const countryOf = (s) => COUNTRIES.find((c) => c.id === s.country) ?? COUNTRIES[0];
 
 export const $ = (id) => document.getElementById(id);
 
@@ -14,8 +16,35 @@ export function renderHud(s) {
 
 export function renderControls(s) {
   $('multiBtn').textContent = `${s.multi}×`;
-  $('filterBtn').textContent = `Автосохр.: ${AUTO_KEEP[s.autoKeep].label}`;
-  $('spinCost').textContent = formatMoney(CONFIG.SPIN_COST * s.multi);
+  $('countryBtn').innerHTML = `${countryOf(s).flag}<span>${countryOf(s).name}</span>`;
+  const bet = currentBet(s);
+  const betBtn = $('betBtn');
+  betBtn.textContent = bet.tier ? `Ставка: ${TIERS[bet.tier].name}+` : 'Ставка: Обычная';
+  betBtn.style.color = bet.tier ? TIERS[bet.tier].color : '';
+  $('spinCost').textContent = formatMoney(spinCost(s));
+}
+
+export function renderBetSheet(s) {
+  const funds = s.balance + (s.pending ? s.pending.price : 0);
+  $('betList').innerHTML = BETS.map((b, i) => {
+    const t = TIERS[b.tier];
+    const ratio = Math.round((b.cost / CONFIG.SPIN_COST) * 10) / 10;
+    const name = b.tier ? `${t.name} и выше` : 'Обычная крутка';
+    const sub = b.tier ? `гарантия редкости · ×${formatMult(ratio)} к цене` : 'любой номер';
+    return `<li><button class="row${i === s.bet ? ' on' : ''}${b.cost * s.multi > funds ? ' poor' : ''}" data-bet="${i}" style="--tier:${b.tier ? t.color : '#fff'}">
+      <span class="row-text"><b class="row-title">${name}</b><small>${sub}</small></span>
+      <span class="row-price">${formatMoney(b.cost)}</span><i class="tick" aria-hidden="true"></i></button></li>`;
+  }).join('');
+  $('betFoot').innerHTML = `${countryOf(s).name} · кошелёк ${formatMoney(s.balance)}<br>Удача тратится только на обычную крутку.${s.multi > 1 ? `<br>Цена указана за 1 крутку, сейчас ${s.multi}×.` : ''}`;
+}
+
+export function renderCountrySheet(s) {
+  $('countryGrid').innerHTML = COUNTRIES.map((c) =>
+    `<button class="country${c.id === s.country ? ' on' : ''}${c.ready ? '' : ' soon'}" data-country="${c.id}">${c.flag}<span>${c.name}</span></button>`).join('');
+  const sim = OPERATORS.map((o) => o.name).join(' · ');
+  $('operList').innerHTML = `<li><button class="row on" style="--tier:#fff" data-oper="any">
+    <span class="sim-mini" aria-hidden="true"></span>
+    <span class="row-text"><b class="row-title">Любой оператор</b><small>${sim}</small></span><i class="tick" aria-hidden="true"></i></button></li>`;
 }
 
 // view = { item, kept } | { item: null }
@@ -40,10 +69,9 @@ export function renderPlay(s, view) {
   if (!item) {
     lines.push('Нажми «Крутить», чтобы выпала первая SIM');
   } else {
-    lines.push(`Код ${item.code} · ${item.city}`);
-    if (item.lucky) lines.push(`Удача: лучший из ${CONFIG.LUCK_BEST_OF} номеров`);
-    if (item.regionMult > 1) lines.push(`Код региона <b>×${formatMult(item.regionMult)}</b>`);
+    lines.push(`Код ${item.code} · ${item.city}${item.regionMult > 1 ? ` · <b>×${formatMult(item.regionMult)}</b>` : ''}`);
     if (item.series) lines.push(`Серия «${item.series.name}» <b>×${item.series.mult}</b>`);
+    if (item.lucky) lines.push(`🍀 Удача: лучший из ${CONFIG.LUCK_BEST_OF} номеров`);
   }
   $('info').innerHTML = lines.map((l) => `<div>${l}</div>`).join('');
 
@@ -74,6 +102,7 @@ export function renderCollection(s) {
 
 export function renderMore(s) {
   $('statsLine').textContent = `Круток: ${s.stats.spins} · Номеров в коллекции: ${s.collection.length}`;
+  $('autoBtn').textContent = `Автосохранение: ${AUTO_KEEP[s.autoKeep].label}`;
 }
 
 export function renderShop() {

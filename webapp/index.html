@@ -12,15 +12,18 @@
 <div class="app">
 
   <header class="hud">
-    <div class="pill lvl"><span id="lvl">Ур. 1</span><i class="xp"><b id="xpbar"></b></i></div>
-    <div class="pill"><svg width="18" height="18" viewBox="0 0 24 24" fill="#3ddc84" aria-hidden="true"><circle cx="9" cy="9" r="5"/><circle cx="15" cy="9" r="5"/><circle cx="9" cy="15" r="5"/><circle cx="15" cy="15" r="5"/></svg><span id="luck">0</span><em class="chip" id="luckChip">x2</em></div>
-    <div class="balance"><small>Баланс</small><strong id="balance">0 ₽</strong></div>
+    <div class="hud-left">
+      <div class="hud-row">
+        <div class="pill lvl"><span id="lvl">Ур. 1</span><i class="xp"><b id="xpbar"></b></i></div>
+        <div class="pill luck" aria-label="Удача"><span class="clover" aria-hidden="true">🍀</span><span id="luck">0</span><em class="chip" id="luckChip">x2</em></div>
+      </div>
+      <div class="seg"><button class="on">SIM</button><button id="tariffsBtn">Тарифы</button></div>
+    </div>
+    <div class="bal-col">
+      <div class="balance"><small>Баланс</small><strong id="balance">0 ₽</strong></div>
+      <button class="shop-btn" id="shopBtn"><span aria-hidden="true">⭐</span>Магазин</button>
+    </div>
   </header>
-
-  <div class="top-tabs">
-    <div class="seg"><button class="on">SIM</button><button id="tariffsBtn">Тарифы</button></div>
-    <button class="pill btn" id="shopBtn">Магазин</button>
-  </div>
 
   <main>
     <section id="view-play" class="play" data-view>
@@ -47,8 +50,8 @@
       <div class="sell-line" id="sellLine"></div>
 
       <div class="controls">
-        <button class="pill btn flex" id="countryBtn">Россия</button>
-        <button class="pill btn" id="filterBtn">Автосохр.: Выкл</button>
+        <button class="pill btn flex" id="countryBtn"></button>
+        <button class="pill btn" id="betBtn">Ставка</button>
         <button class="pill btn" id="multiBtn">1×</button>
       </div>
       <button class="spin" id="spinBtn"><span id="spinLabel">Крутить</span><em class="cost" id="spinCost"></em></button>
@@ -75,6 +78,7 @@
       <h2>Ещё</h2>
       <p class="muted" id="statsLine"></p>
       <button class="pill btn wide" id="dailyBtn">Ежедневный бонус</button>
+      <button class="pill btn wide" id="autoBtn">Автосохранение: Выкл</button>
       <button class="pill btn wide danger" id="resetBtn">Сбросить прогресс</button>
     </section>
   </main>
@@ -88,10 +92,28 @@
   </nav>
 </div>
 
-<dialog id="shop">
+<dialog id="shop" class="sheet">
+  <div class="grab"></div>
   <h2>Магазин</h2>
   <ul class="list" id="shopList"></ul>
   <button class="pill btn wide" id="shopClose">Закрыть</button>
+</dialog>
+
+<dialog id="countrySheet" class="sheet">
+  <div class="grab"></div>
+  <h2>Какие SIM крутить</h2>
+  <p class="muted center">Выбери страну. У каждой будут свои операторы</p>
+  <div class="countries" id="countryGrid"></div>
+  <ul class="list rows" id="operList"></ul>
+  <p class="muted center small">Операторы выбранной страны появятся позже</p>
+</dialog>
+
+<dialog id="betSheet" class="sheet">
+  <div class="grab"></div>
+  <h2>Ставка</h2>
+  <p class="muted center">Дороже крутка — выше гарантированная редкость. Цена примерно равна средней стоимости такого номера, так что это не бесплатные деньги, а быстрый путь к редким номерам.</p>
+  <ul class="list rows" id="betList"></ul>
+  <p class="muted center small" id="betFoot"></p>
 </dialog>
 <div class="toast" id="toast" role="status"></div>
 

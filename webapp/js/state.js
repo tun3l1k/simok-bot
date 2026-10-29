@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js';
+import { CONFIG, BETS, COUNTRIES } from './config.js';
 
 export const fresh = () => ({
   v: 1,
@@ -10,6 +10,8 @@ export const fresh = () => ({
   pending: null, // выпавший, но ещё не сохранённый номер (продастся при следующей крутке)
   multi: 1,
   autoKeep: 0,
+  bet: 0,        // индекс в BETS: 0 — обычная крутка
+  country: 'ru',
   stats: { spins: 0 },
   lastDaily: 0,
   ref: null,
@@ -19,7 +21,12 @@ export const fresh = () => ({
 export function load() {
   try {
     const raw = localStorage.getItem(CONFIG.SAVE_KEY);
-    if (raw) return { ...fresh(), ...JSON.parse(raw) };
+    if (raw) {
+      const s = { ...fresh(), ...JSON.parse(raw) };
+      if (!BETS[s.bet]) s.bet = 0;
+      if (!COUNTRIES.some((c) => c.id === s.country && c.ready)) s.country = 'ru';
+      return s;
+    }
   } catch { /* повреждённое сохранение: начинаем заново */ }
   return fresh();
 }
