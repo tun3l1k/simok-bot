@@ -1,0 +1,14 @@
+{
+  "name": "simok-bot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "SimOk, Telegram Mini App: рулетка SIM-карт с красивыми номерами",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "web": "npx --yes serve webapp -l 5173",
+    "bot": "node --env-file=.env bot/index.js",
+    "sim": "node scripts/simulate.js"
+  },
+  "dependencies": { "grammy": "^1.30.0" }
+}
