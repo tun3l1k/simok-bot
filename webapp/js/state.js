@@ -12,7 +12,7 @@ export const fresh = () => ({
   autoKeep: 0,
   bet: 0,        // индекс в BETS: 0 — обычная крутка
   country: 'ru',
-  uiScale: 0.9,  // множитель размера интерфейса, одно из UI_SCALES[].v (0.9 — «Обычный»)
+  uiScale: 0.95, // множитель размера интерфейса, одно из UI_SCALES[].v (0.95 — «Обычный»)
   stats: { spins: 0 },
   lastDaily: 0,
   ref: null,

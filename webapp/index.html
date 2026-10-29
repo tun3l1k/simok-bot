@@ -33,6 +33,7 @@
         <div class="tier-price" id="tierPrice"></div>
       </div>
 
+      <div class="stage">
       <div class="sim-wrap">
         <div class="sim" id="sim">
           <div class="sim-top"><span class="op" id="simOp">MOBI</span><span class="city" id="simCity">4G</span></div>
@@ -48,13 +49,8 @@
         <button class="pill btn icon" id="shareBtn" aria-label="Поделиться"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M8 7l4-4 4 4M5 12v8h14v-8"/></svg></button>
       </div>
       <div class="sell-line" id="sellLine"></div>
-
-      <div class="controls">
-        <button class="pill btn flex" id="countryBtn"></button>
-        <button class="pill btn" id="betBtn">Ставка</button>
-        <button class="pill btn" id="multiBtn">1×</button>
       </div>
-      <button class="spin" id="spinBtn"><span id="spinLabel">Крутить</span><em class="cost" id="spinCost"></em></button>
+
     </section>
 
     <section id="view-collection" class="panel" data-view hidden>
@@ -82,6 +78,15 @@
       <button class="pill btn wide danger" id="resetBtn">Сбросить прогресс</button>
     </section>
   </main>
+
+  <div class="dock" id="dock">
+    <div class="controls">
+      <button class="pill btn flex" id="countryBtn"></button>
+      <button class="pill btn" id="betBtn">Ставка</button>
+      <button class="pill btn" id="multiBtn">1×</button>
+    </div>
+    <button class="spin" id="spinBtn"><span id="spinLabel">Крутить</span><em class="cost" id="spinCost"></em></button>
+  </div>
 
   <nav class="nav" id="nav">
     <button data-go="play" class="on"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M7 4.5v15l12.5-7.5z"/></svg>Играть</button>

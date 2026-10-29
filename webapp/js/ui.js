@@ -140,6 +140,7 @@ export function toast(msg) {
 }
 
 export function showView(name) {
+  $('dock').hidden = name !== 'play'; // ставка и «Крутить» нужны только на экране игры
   document.querySelectorAll('[data-view]').forEach((v) => { v.hidden = v.id !== `view-${name}`; });
   document.querySelectorAll('#nav button').forEach((b) => b.classList.toggle('on', b.dataset.go === name));
 }
