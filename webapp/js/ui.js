@@ -1,4 +1,4 @@
-import { CONFIG, TIERS, OPERATORS, AUTO_KEEP, BETS, COUNTRIES, SHOP_ITEMS, xpForLevel } from './config.js';
+import { CONFIG, TIERS, OPERATORS, AUTO_KEEP, BETS, COUNTRIES, SHOP_ITEMS, UI_SCALES, xpForLevel } from './config.js';
 import { formatPhone, formatMoney, formatMult } from './generator.js';
 import { collectionValue, currentBet, spinCost } from './game.js';
 
@@ -100,7 +100,13 @@ export function renderCollection(s) {
     : '<li class="empty">Пока пусто. Нажми «В коллекцию» на понравившемся номере.</li>';
 }
 
+export const applyScale = (v) => document.documentElement.style.setProperty('--ui', v);
+
 export function renderMore(s) {
+  applyScale(s.uiScale);
+  $('scaleList').innerHTML = UI_SCALES.map((x) =>
+    `<button class="${x.v === s.uiScale ? 'on' : ''}" data-scale="${x.v}" aria-label="${x.label}" aria-pressed="${x.v === s.uiScale}">${Math.round(x.v * 100)}%</button>`).join('');
+  $('scaleHint').textContent = (UI_SCALES.find((x) => x.v === s.uiScale) ?? UI_SCALES[1]).label;
   $('statsLine').textContent = `Круток: ${s.stats.spins} · Номеров в коллекции: ${s.collection.length}`;
   $('autoBtn').textContent = `Автосохранение: ${AUTO_KEEP[s.autoKeep].label}`;
 }

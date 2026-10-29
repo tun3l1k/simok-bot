@@ -78,7 +78,7 @@
       <h2>Ещё</h2>
       <p class="muted" id="statsLine"></p>
       <button class="pill btn wide" id="dailyBtn">Ежедневный бонус</button>
-      <button class="pill btn wide" id="autoBtn">Автосохранение: Выкл</button>
+      <button class="pill btn wide" id="settingsBtn">Настройки</button>
       <button class="pill btn wide danger" id="resetBtn">Сбросить прогресс</button>
     </section>
   </main>
@@ -97,6 +97,17 @@
   <h2>Магазин</h2>
   <ul class="list" id="shopList"></ul>
   <button class="pill btn wide" id="shopClose">Закрыть</button>
+</dialog>
+
+<dialog id="settingsSheet" class="sheet">
+  <div class="grab"></div>
+  <h2>Настройки</h2>
+  <div class="setting">
+    <div class="setting-head"><span>Размер интерфейса</span><small id="scaleHint"></small></div>
+    <div class="scale" id="scaleList" role="group" aria-label="Размер интерфейса"></div>
+  </div>
+  <button class="pill btn wide" id="autoBtn">Автосохранение: Выкл</button>
+  <button class="pill btn wide" id="settingsClose">Закрыть</button>
 </dialog>
 
 <dialog id="countrySheet" class="sheet">

@@ -17,6 +17,14 @@ export const CONFIG = {
   DAILY_BONUS: { balance: 2000, luck: 3, cooldownH: 20 },
 };
 
+// Размер интерфейса: v — множитель, label — подпись на кнопке
+export const UI_SCALES = [
+  { v: 0.8, label: 'Мелкий' },
+  { v: 0.9, label: 'Обычный' },
+  { v: 1, label: 'Крупный' },
+  { v: 1.12, label: 'Огромный' },
+];
+
 export const xpForLevel = (lvl) => 100 + 60 * (lvl - 1);
 export const levelReward = (lvl) => ({ balance: 1000 * lvl, luck: 3 });
 
