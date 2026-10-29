@@ -19,7 +19,7 @@ export function renderControls(s) {
   $('countryBtn').innerHTML = `${countryOf(s).flag}<span>${countryOf(s).name}</span>`;
   const bet = currentBet(s);
   const betBtn = $('betBtn');
-  betBtn.textContent = bet.tier ? `Ставка: ${TIERS[bet.tier].name}+` : 'Ставка: Обычная';
+  betBtn.textContent = `Ставка: ${bet.name}`;
   betBtn.style.color = bet.tier ? TIERS[bet.tier].color : '';
   $('spinCost').textContent = formatMoney(spinCost(s));
 }
@@ -28,14 +28,20 @@ export function renderBetSheet(s) {
   const funds = s.balance + (s.pending ? s.pending.price : 0);
   $('betList').innerHTML = BETS.map((b, i) => {
     const t = TIERS[b.tier];
-    const ratio = Math.round((b.cost / CONFIG.SPIN_COST) * 10) / 10;
-    const name = b.tier ? `${t.name} и выше` : 'Обычная крутка';
-    const sub = b.tier ? `гарантия редкости · ×${formatMult(ratio)} к цене` : 'любой номер';
+    const sub = b.tier
+      ? `${t.name} и выше · ≈ ${formatMoney(b.avg)}`
+      : `любой номер · ≈ ${formatMoney(b.avg)}`;
     return `<li><button class="row${i === s.bet ? ' on' : ''}${b.cost * s.multi > funds ? ' poor' : ''}" data-bet="${i}" style="--tier:${b.tier ? t.color : '#fff'}">
-      <span class="row-text"><b class="row-title">${name}</b><small>${sub}</small></span>
+      <span class="row-text"><b class="row-title">${b.name}</b><small>${sub}</small></span>
       <span class="row-price">${formatMoney(b.cost)}</span><i class="tick" aria-hidden="true"></i></button></li>`;
   }).join('');
-  $('betFoot').innerHTML = `${countryOf(s).name} · кошелёк ${formatMoney(s.balance)}<br>Удача тратится только на обычную крутку.${s.multi > 1 ? `<br>Цена указана за 1 крутку, сейчас ${s.multi}×.` : ''}`;
+  const cost = spinCost(s);
+  const left = funds - cost;
+  $('betFoot').innerHTML = (left >= 0
+    ? `После крутки останется ${formatMoney(left)}`
+    : `Не хватает ${formatMoney(-left)}`)
+    + (s.multi > 1 ? ` (${s.multi}× по ${formatMoney(currentBet(s).cost)})` : '')
+    + '<br>🍀 Удача работает только на «Эконом»';
 }
 
 export function renderCountrySheet(s) {

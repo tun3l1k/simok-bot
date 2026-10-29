@@ -129,5 +129,5 @@ export function rollMin(minTier) {
 }
 
 export const formatPhone = (it) => `+7 ${it.code} ${it.body.slice(0, 3)}-${it.body.slice(3, 5)}-${it.body.slice(5)}`;
-export const formatMoney = (n) => `${Math.round(n).toLocaleString('ru-RU')} ₽`;
+export const formatMoney = (n) => `${Math.round(n).toLocaleString('ru-RU')}\u00A0₽`;
 export const formatMult = (m) => String(m).replace('.', ',');
