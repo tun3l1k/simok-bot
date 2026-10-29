@@ -1,4 +1,4 @@
-import { CONFIG, AUTO_KEEP, BETS, COUNTRIES, SHOP_ITEMS, UI_SCALES } from './config.js';
+import { CONFIG, AUTO_KEEP, BETS, COUNTRIES, SHOP_ITEMS } from './config.js';
 import { formatPhone, formatMoney } from './generator.js';
 import { load, save, fresh } from './state.js';
 import * as game from './game.js';
@@ -8,7 +8,6 @@ import { initTelegram, haptic, hapticDone, shareText, inviteLink } from './teleg
 
 initTelegram();
 let state = load();
-ui.applyScale(state.uiScale); // сразу, до первой отрисовки, чтобы интерфейс не прыгал
 let view = { item: state.pending, kept: false };
 let busy = false;
 
@@ -117,20 +116,12 @@ $('dailyBtn').onclick = () => {
 };
 $('resetBtn').onclick = () => {
   if (!confirm('Сбросить весь прогресс?')) return;
-  state = { ...fresh(), uiScale: state.uiScale }; view = { item: null, kept: false }; renderAll(); ui.showView('play');
+  state = fresh(); view = { item: null, kept: false }; renderAll(); ui.showView('play');
 };
 
 // Магазин: пока заглушка
 $('settingsBtn').onclick = () => $('settingsSheet').showModal();
 $('settingsClose').onclick = () => $('settingsSheet').close();
-$('scaleList').onclick = (e) => {
-  const v = Number(e.target.closest('[data-scale]')?.dataset.scale);
-  if (!UI_SCALES.some((x) => x.v === v)) return;
-  state.uiScale = v;
-  haptic();
-  renderAll();
-};
-
 ui.renderShop();
 $('shopBtn').onclick = () => $('shop').showModal();
 $('shopClose').onclick = () => $('shop').close();
