@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#140f1f">
+<title>SimOk</title>
+<link rel="stylesheet" href="css/style.css">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+<div class="app">
+
+  <header class="hud">
+    <div class="pill lvl"><span id="lvl">Ур. 1</span><i class="xp"><b id="xpbar"></b></i></div>
+    <div class="pill"><svg width="18" height="18" viewBox="0 0 24 24" fill="#3ddc84" aria-hidden="true"><circle cx="9" cy="9" r="5"/><circle cx="15" cy="9" r="5"/><circle cx="9" cy="15" r="5"/><circle cx="15" cy="15" r="5"/></svg><span id="luck">0</span><em class="chip" id="luckChip">x2</em></div>
+    <div class="balance"><small>Баланс</small><strong id="balance">0 ₽</strong></div>
+  </header>
+
+  <div class="top-tabs">
+    <div class="seg"><button class="on">SIM</button><button id="tariffsBtn">Тарифы</button></div>
+    <button class="pill btn" id="shopBtn">Магазин</button>
+  </div>
+
+  <main>
+    <section id="view-play" class="play" data-view>
+      <div class="tier-row">
+        <div><div class="tier-name" id="tierName">—</div>
+          <div class="bars" id="tierBars"><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+        <div class="tier-price" id="tierPrice"></div>
+      </div>
+
+      <div class="sim-wrap">
+        <div class="sim" id="sim">
+          <div class="sim-top"><span class="op" id="simOp">MOBI</span><span class="city" id="simCity">4G</span></div>
+          <svg class="chip-svg" width="56" height="42" viewBox="0 0 56 42" aria-hidden="true"><rect x="1" y="1" width="54" height="40" rx="8" fill="#e6c25a" stroke="#a8872a" stroke-width="2"/><path d="M1 14h18M1 28h18M37 14h18M37 28h18M19 1v40M37 1v40M19 14h18M19 28h18" stroke="#a8872a" stroke-width="1.5" fill="none"/></svg>
+          <div class="sim-number" id="simNumber">+7 ··· ···-··-··</div>
+        </div>
+      </div>
+
+      <div class="info" id="info"></div>
+
+      <div class="actions">
+        <button class="pill btn" id="keepBtn">В коллекцию</button>
+        <button class="pill btn icon" id="shareBtn" aria-label="Поделиться"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M8 7l4-4 4 4M5 12v8h14v-8"/></svg></button>
+      </div>
+      <div class="sell-line" id="sellLine"></div>
+
+      <div class="controls">
+        <button class="pill btn flex" id="countryBtn">Россия</button>
+        <button class="pill btn" id="filterBtn">Автосохр.: Выкл</button>
+        <button class="pill btn" id="multiBtn">1×</button>
+      </div>
+      <button class="spin" id="spinBtn"><span id="spinLabel">Крутить</span><em class="cost" id="spinCost"></em></button>
+    </section>
+
+    <section id="view-collection" class="panel" data-view hidden>
+      <h2>Коллекция</h2>
+      <p class="muted" id="collectionTotal"></p>
+      <ul class="list" id="collectionList"></ul>
+    </section>
+
+    <section id="view-market" class="panel" data-view hidden>
+      <h2>Рынок</h2>
+      <p class="muted">Скоро: продажа и обмен номерами между игроками.</p>
+    </section>
+
+    <section id="view-friends" class="panel" data-view hidden>
+      <h2>Друзья</h2>
+      <p class="muted">Отправь другу ссылку на игру. Награды за приглашения появятся с бэкендом.</p>
+      <button class="pill btn wide" id="inviteBtn">Пригласить друга</button>
+    </section>
+
+    <section id="view-more" class="panel" data-view hidden>
+      <h2>Ещё</h2>
+      <p class="muted" id="statsLine"></p>
+      <button class="pill btn wide" id="dailyBtn">Ежедневный бонус</button>
+      <button class="pill btn wide danger" id="resetBtn">Сбросить прогресс</button>
+    </section>
+  </main>
+
+  <nav class="nav" id="nav">
+    <button data-go="play" class="on"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M7 4.5v15l12.5-7.5z"/></svg>Играть</button>
+    <button data-go="collection"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5L12 4l9 6.5V20H3z"/><rect x="8" y="12" width="8" height="8" rx="1"/></svg>Коллекция</button>
+    <button data-go="market"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5l1.5-5h13l1.5 5v10.5H4z"/><path d="M4 9.5h16M9 9.5v3M15 9.5v3"/><path d="M9 20v-4h6v4"/></svg>Рынок</button>
+    <button data-go="friends"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.5-3.6 3-5.5 6.5-5.5s6 1.9 6.5 5.5"/><path d="M15.5 4.8a3.5 3.5 0 010 6.4M18 14.8c2 .7 3.2 2.3 3.5 5.2"/></svg>Друзья</button>
+    <button data-go="more"><svg viewBox="0 0 24 24" class="fill" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>Ещё</button>
+  </nav>
+</div>
+
+<dialog id="shop">
+  <h2>Магазин</h2>
+  <ul class="list" id="shopList"></ul>
+  <button class="pill btn wide" id="shopClose">Закрыть</button>
+</dialog>
+<div class="toast" id="toast" role="status"></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
