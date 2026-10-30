@@ -1,4 +1,4 @@
-import { CONFIG, TIERS, CODES, OPERATORS } from './config.js';
+import { CONFIG, TIERS, CODES, OPERATORS, DIGIT_BONUS } from './config.js';
 
 const rand = (a, b) => a + Math.random() * (b - a);
 const dig = () => Math.floor(Math.random() * 10);
@@ -33,29 +33,36 @@ const mk = {
   tail: (n, c) => () => { const a = c ?? dig(); return digits(7 - n) + String(a).repeat(n); },
   mirror: () => { const h = digits(3); return h + dig() + rev(h); },
   halfMirror: () => { const h = digits(3); return dig() + h + rev(h); },
-  triple: () => {
+  triple: (c) => () => {
     const d = digits(7).split('');
     const pos = Math.floor(Math.random() * 5);
-    d[pos] = d[pos + 1] = d[pos + 2] = String(dig());
+    d[pos] = d[pos + 1] = d[pos + 2] = String(c ?? dig());
     return d.join('');
+  },
+  ladder5: () => {
+    const up = Math.random() < 0.5;
+    const start = up ? Math.floor(Math.random() * 6) : 4 + Math.floor(Math.random() * 6);
+    return digits(2) + [0, 1, 2, 3, 4].map((i) => start + (up ? i : -i)).join('');
   },
 };
 
 // «Серии»: берётся самая дорогая из подходящих. b — 7 цифр номера без кода.
-// p — примерная частота при чистой случайности (нужна ставкам с гарантией редкости), make — конструктор номера.
+// p — частота серии среди обычных круток (измерена в npm run sim; нужна для «1 из N» и ставок с гарантией), make — конструктор номера.
 export const SERIES = [
-  { name: 'Идеал', mult: 500, p: 1 / 60000, test: (b) => same(b), make: () => String(dig()).repeat(7) },
-  { name: 'Зеркало', mult: 60, p: 1 / 1000, test: (b) => isPal(b), make: mk.mirror },
-  { name: 'Нулевой хвост', mult: 40, p: 1 / 1000, test: (b) => b.endsWith('0000'), make: mk.tail(4, 0) },
-  { name: 'Четвёрка', mult: 25, p: 1 / 140, test: (b) => same(b.slice(-4)), make: mk.tail(4) },
-  { name: 'Лесенка', mult: 25, p: 1 / 130, test: (b) => isRun(b.slice(-4)), make: mk.ladder },
-  { name: 'Три нуля', mult: 15, p: 1 / 470, test: (b) => b.endsWith('000'), make: mk.tail(3, 0) },
+  { name: 'Длинная лесенка', mult: 80, p: 1 / 1430, test: (b) => isRun(b.slice(-5)), make: mk.ladder5 },
+  { name: 'Идеал', mult: 500, p: 1 / 130000, test: (b) => same(b), make: () => String(dig()).repeat(7) },
+  { name: 'Зеркало', mult: 60, p: 1 / 1030, test: (b) => isPal(b), make: mk.mirror },
+  { name: 'Нулевой хвост', mult: 40, p: 1 / 1080, test: (b) => b.endsWith('0000'), make: mk.tail(4, 0) },
+  { name: 'Четвёрка', mult: 25, p: 1 / 135, test: (b) => same(b.slice(-4)), make: mk.tail(4) },
+  { name: 'Лесенка', mult: 25, p: 1 / 137, test: (b) => isRun(b.slice(-4)), make: mk.ladder },
+  { name: 'Три нуля', mult: 15, p: 1 / 487, test: (b) => b.endsWith('000'), make: mk.tail(3, 0) },
   { name: 'Пара-пара', mult: 12, p: 1 / 66, test: (b) => { const t = b.slice(-4); return t[0] === t[2] && t[1] === t[3] && t[0] !== t[1]; }, make: mk.abab },
-  { name: 'Полузеркало', mult: 12, p: 1 / 1000, test: (b) => isPal(b.slice(1)), make: mk.halfMirror },
-  { name: 'Дубль-дубль', mult: 8, p: 1 / 63, test: (b) => { const t = b.slice(-4); return t[0] === t[1] && t[2] === t[3] && t[0] !== t[2]; }, make: mk.aabb },
-  { name: 'Тройка', mult: 8, p: 1 / 75, test: (b) => same(b.slice(-3)), make: mk.tail(3) },
-  { name: 'Круглый', mult: 5, p: 1 / 75, test: (b) => b.endsWith('00'), make: mk.tail(2, 0) },
-  { name: 'Три подряд', mult: 3, p: 1 / 30, test: (b) => /(\d)\1\1/.test(b), make: mk.triple },
+  { name: 'Полузеркало', mult: 12, p: 1 / 990, test: (b) => isPal(b.slice(1)), make: mk.halfMirror },
+  { name: 'Дубль-дубль', mult: 8, p: 1 / 65, test: (b) => { const t = b.slice(-4); return t[0] === t[1] && t[2] === t[3] && t[0] !== t[2]; }, make: mk.aabb },
+  { name: 'Тройка', mult: 8, p: 1 / 85, test: (b) => same(b.slice(-3)), make: mk.tail(3) },
+  { name: 'Круглый', mult: 5, p: 1 / 76, test: (b) => b.endsWith('00'), make: mk.tail(2, 0) },
+  { name: 'Три семёрки', mult: 20, p: 1 / 201, test: (b) => b.includes('777'), make: mk.triple(7) },
+  { name: 'Три подряд', mult: 3, p: 1 / 34, test: (b) => /(\d)\1\1/.test(b), make: mk.triple() },
 ];
 
 export function detectSeries(body) {
@@ -67,31 +74,56 @@ export function detectSeries(body) {
 // Намеренно красивые хвосты, чтобы редкие номера выпадали чаще, чем при чистой случайности
 const BUILDERS = [mk.abab, mk.aabb, mk.tail(3), () => digits(5) + '00', mk.tail(4), mk.ladder];
 
+// «1 из N» для серии: берём частоту из таблицы SERIES
+export const oddsOf = (series) => {
+  const s = series && SERIES.find((x) => x.name === series.name);
+  return s ? Math.round(1 / s.p) : null;
+};
+
+// Бонус любимой цифры: считаем её вхождения в 7 цифр номера
+export function digitBonus(body, digit) {
+  if (digit === null || digit === undefined) return null;
+  const count = body.split('').filter((c) => c === String(digit)).length;
+  const b = DIGIT_BONUS.find((x) => count >= x.min);
+  return b ? { digit, count, mult: b.mult } : null;
+}
+
 export const tierOf = (price) => {
   let t = 0;
   TIERS.forEach((x, i) => { if (price >= x.min) t = i; });
   return t;
 };
 
-const priceOf = (base, region, series) =>
-  Math.max(5, Math.round((base * region.mult * (series ? series.mult : 1)) / 5) * 5);
+const priceOf = (base, region, series, dig) =>
+  Math.max(5, Math.round((base * region.mult * (series ? series.mult : 1) * (dig ? dig.mult : 1)) / 5) * 5);
 
-function makeItem(region, body, base) {
+// opts: { op, digit } — оператор тарифа и любимая цифра игрока
+function makeItem(region, body, base, opts = {}) {
   const series = detectSeries(body);
-  const price = priceOf(base, region, series);
+  const dig = digitBonus(body, opts.digit);
+  const price = priceOf(base, region, series, dig);
   return {
     id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
-    op: pick(OPERATORS).id, code: region.code, city: region.city, body,
-    base, regionMult: region.mult, series, price, tier: tierOf(price), lucky: false,
+    op: opts.op ?? pick(OPERATORS).id, code: region.code, city: region.city, body,
+    base, regionMult: region.mult, series, odds: oddsOf(series), digit: dig,
+    price, tier: tierOf(price), lucky: false,
   };
 }
 
 const rollBase = () => Math.round(rand(CONFIG.BASE_MIN, CONFIG.BASE_MAX));
+const perkOf = (opts) => OPERATORS.find((o) => o.id === opts.op) ?? {};
 
-export function roll() {
-  const region = pickWeighted(CODES);
-  const body = Math.random() < CONFIG.PATTERN_BOOST ? pick(BUILDERS)() : digits(7);
-  return makeItem(region, body, rollBase());
+// Региональные веса с учётом бонуса оператора (МГС: Москва чаще, Билайт: Питер, Теле3: коды 900/999)
+function pickRegion(opts) {
+  const { cityBoost = {}, codeBoost = {} } = perkOf(opts);
+  return pickWeighted(CODES, (c) => c.w * (cityBoost[c.city] ?? 1) * (codeBoost[c.code] ?? 1));
+}
+
+export function roll(opts = {}) {
+  const region = pickRegion(opts);
+  const boost = perkOf(opts).patternBoost ?? CONFIG.PATTERN_BOOST;
+  const body = Math.random() < boost ? pick(BUILDERS)() : digits(7);
+  return makeItem(region, body, rollBase(), opts);
 }
 
 // Вес каждой серии среди номеров нужной редкости: частота серии × шанс, что база и код региона
@@ -114,15 +146,15 @@ function seriesWeights(minTier) {
 }
 
 // Ставка с гарантией: номер не ниже редкости minTier.
-export function rollMin(minTier) {
-  if (!minTier) return roll();
+export function rollMin(minTier, opts = {}) {
+  if (!minTier) return roll(opts);
   const need = TIERS[minTier].min;
   const { s } = pickWeighted(seriesWeights(minTier));
   for (let i = 0; i < 5000; i++) {
-    const region = pickWeighted(CODES);
+    const region = pickRegion(opts);
     const base = rollBase();
     if (base * region.mult * s.mult < need) continue;
-    const item = makeItem(region, s.make(), base);
+    const item = makeItem(region, s.make(), base, opts);
     if (item.price >= need) return item;
   }
   throw new Error(`Не удалось собрать номер редкости ${minTier}`);

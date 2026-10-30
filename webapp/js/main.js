@@ -1,4 +1,4 @@
-import { CONFIG, AUTO_KEEP, BETS, COUNTRIES, SHOP_ITEMS } from './config.js';
+import { CONFIG, AUTO_KEEP, BETS, COUNTRIES, OPERATORS, SHOP_ITEMS } from './config.js';
 import { formatPhone, formatMoney } from './generator.js';
 import { load, save, fresh } from './state.js';
 import * as game from './game.js';
@@ -19,6 +19,7 @@ function renderAll() {
   ui.renderControls(state);
   ui.renderPlay(state, view);
   ui.renderCollection(state);
+  ui.renderTariffs(state);
   ui.renderMore(state);
   save(state);
 }
@@ -56,7 +57,6 @@ $('multiBtn').onclick = () => {
   renderAll();
 };
 $('autoBtn').onclick = () => { state.autoKeep = (state.autoKeep + 1) % AUTO_KEEP.length; renderAll(); };
-$('tariffsBtn').onclick = () => ui.toast('Тарифы скоро');
 
 // Шторки: закрываются тапом по затемнению
 document.querySelectorAll('dialog.sheet').forEach((d) => d.addEventListener('click', (e) => {
@@ -95,16 +95,75 @@ $('shareBtn').onclick = () => {
   shareText(`Мне выпал номер ${formatPhone(view.item)} за ${formatMoney(view.item.price)}`, inviteLink(CONFIG.BOT_USERNAME));
 };
 
+function openDetail(item, title) {
+  if (!item) return;
+  ui.renderDetail(item, title);
+  $('detailSheet').showModal();
+}
+$('detailClose').onclick = () => $('detailSheet').close();
+$('info').onclick = (e) => { if (e.target.closest('#detailLink')) openDetail(view.item); };
+
 $('collectionList').onclick = (e) => {
   const id = e.target.dataset?.sell;
-  if (!id) return;
-  const price = game.sellFromCollection(state, id);
-  if (price) { ui.toast(`Продано за ${formatMoney(price)}`); haptic(); renderAll(); }
+  if (id) {
+    const price = game.sellFromCollection(state, id);
+    if (price) { ui.toast(`Продано за ${formatMoney(price)}`); haptic(); renderAll(); }
+    return;
+  }
+  const did = e.target.closest('[data-detail]')?.dataset.detail;
+  if (did) openDetail(state.collection.find((x) => x.id === did));
 };
 
-$('nav').onclick = (e) => {
+const goView = (e) => {
   const go = e.target.closest('button')?.dataset.go;
   if (go) ui.showView(go);
+};
+$('nav').onclick = goView;
+$('seg').onclick = goView;
+
+// Тарифы: выбор оператора
+$('tariffList').onclick = (e) => {
+  const row = e.target.closest('[data-oper-id]');
+  if (!row) return;
+  state.operator = row.dataset.operId || null;
+  const op = OPERATORS.find((o) => o.id === state.operator);
+  ui.toast(op ? `${op.name} «${op.tag}»: ${op.perk}` : 'Любой оператор: без бонусов');
+  haptic();
+  renderAll();
+};
+
+// Любимая цифра
+$('digitList').onclick = (e) => {
+  const b = e.target.closest('[data-digit]');
+  if (!b) return;
+  state.digit = b.dataset.digit === '' ? null : Number(b.dataset.digit);
+  haptic();
+  renderAll();
+};
+
+// Слияние: выбираем три номера одной редкости
+let craftSel = [];
+const craftOpen = () => { ui.renderCraft(state, craftSel); };
+$('craftBtn').onclick = () => { craftSel = []; craftOpen(); $('craftSheet').showModal(); };
+$('craftList').onclick = (e) => {
+  const id = e.target.closest('[data-craft]')?.dataset.craft;
+  const it = state.collection.find((x) => x.id === id);
+  if (!it) return;
+  const first = state.collection.find((x) => x.id === craftSel[0]);
+  if (craftSel.includes(id)) craftSel = craftSel.filter((x) => x !== id);
+  else if (first && first.tier === it.tier && craftSel.length < 3) craftSel = [...craftSel, id];
+  else craftSel = [id];
+  haptic();
+  craftOpen();
+};
+$('craftGo').onclick = () => {
+  const res = game.craft(state, craftSel);
+  if (res.error) { ui.toast(res.error); return; }
+  craftSel = [];
+  hapticDone();
+  renderAll();
+  $('craftSheet').close();
+  openDetail(res.item, 'Слияние');
 };
 
 $('inviteBtn').onclick = () => shareText('Крути SIM-карты и собирай красивые номера', inviteLink(CONFIG.BOT_USERNAME));

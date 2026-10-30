@@ -17,7 +17,7 @@
         <div class="pill lvl"><span id="lvl">Ур. 1</span><i class="xp"><b id="xpbar"></b></i></div>
         <div class="pill luck" aria-label="Удача"><span class="clover" aria-hidden="true">🍀</span><span id="luck">0</span><em class="chip" id="luckChip">x2</em></div>
       </div>
-      <div class="seg"><button class="on">SIM</button><button id="tariffsBtn">Тарифы</button></div>
+      <div class="seg" id="seg"><button class="on" data-go="play">SIM</button><button id="tariffsBtn" data-go="tariffs">Тарифы</button></div>
     </div>
     <div class="bal-col">
       <div class="balance"><small>Баланс</small><strong id="balance">0 ₽</strong></div>
@@ -53,15 +53,21 @@
 
     </section>
 
+    <section id="view-tariffs" class="panel" data-view hidden>
+      <h2>Тарифы</h2>
+      <p class="muted">Оператор влияет на то, какие SIM выпадают: у каждого свой бонус. «Любой оператор» работает без бонусов.</p>
+      <ul class="list rows" id="tariffList"></ul>
+    </section>
+
     <section id="view-collection" class="panel" data-view hidden>
-      <h2>Коллекция</h2>
+      <div class="panel-head"><h2>Коллекция</h2><button class="pill btn small" id="craftBtn">Слияние</button></div>
       <p class="muted" id="collectionTotal"></p>
       <ul class="list" id="collectionList"></ul>
     </section>
 
     <section id="view-market" class="panel" data-view hidden>
       <h2>Рынок</h2>
-      <p class="muted">Скоро: продажа и обмен номерами между игроками.</p>
+      <p class="muted">Скоро: продажа и обмен номерами между игроками. Рынок будет только из живых людей, без ботов, поэтому он появится вместе с сервером.</p>
     </section>
 
     <section id="view-friends" class="panel" data-view hidden>
@@ -107,8 +113,31 @@
 <dialog id="settingsSheet" class="sheet">
   <div class="grab"></div>
   <h2>Настройки</h2>
+  <div class="setting">
+    <div class="setting-head"><span>Любимая цифра</span><small id="digitHint"></small></div>
+    <div class="digits" id="digitList" role="group" aria-label="Любимая цифра"></div>
+    <p class="muted small left" id="digitNote"></p>
+  </div>
   <button class="pill btn wide" id="autoBtn">Автосохранение: Выкл</button>
   <button class="pill btn wide" id="settingsClose">Закрыть</button>
+</dialog>
+
+<dialog id="detailSheet" class="sheet">
+  <div class="grab"></div>
+  <h2 id="detailNum"></h2>
+  <p class="center tier-line" id="detailTier"></p>
+  <ul class="list rows breakdown" id="detailRows"></ul>
+  <p class="muted center small" id="detailFoot"></p>
+  <button class="pill btn wide" id="detailClose">Закрыть</button>
+</dialog>
+
+<dialog id="craftSheet" class="sheet">
+  <div class="grab"></div>
+  <h2>Слияние</h2>
+  <p class="muted center">Выбери 3 номера одной редкости и получи 1 номер редкостью выше. Ценность почти равна сумме трёх номеров (комиссия 5%), поэтому это обмен, а не заработок. Если класс дороже суммы, нужна доплата.</p>
+  <ul class="list rows" id="craftList"></ul>
+  <p class="muted center small" id="craftQuote"></p>
+  <button class="pill btn wide go" id="craftGo" disabled>Слить</button>
 </dialog>
 
 <dialog id="countrySheet" class="sheet">
@@ -123,7 +152,7 @@
 <dialog id="betSheet" class="sheet">
   <div class="grab"></div>
   <h2>Ставка</h2>
-  <p class="muted center">Выбери класс SIM. Чем он выше, тем редче номер: ниже планки класса он не выпадет. Цена равна средней стоимости номера класса, так что ты платишь за скорость, а не за удачу.</p>
+  <p class="muted center">Выбери, какой редкости будет номер как минимум: ниже планки он не выпадет. Цена равна средней стоимости такого номера, так что ты платишь за скорость, а не за удачу.</p>
   <ul class="list rows" id="betList"></ul>
   <p class="muted center small" id="betFoot"></p>
 </dialog>

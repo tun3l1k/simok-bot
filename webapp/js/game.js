@@ -1,8 +1,13 @@
-import { CONFIG, AUTO_KEEP, BETS, xpForLevel, levelReward } from './config.js';
+import { CONFIG, AUTO_KEEP, BETS, OPERATORS, CRAFT, xpForLevel, levelReward } from './config.js';
 import { roll, rollMin } from './generator.js';
 
 export const currentBet = (s) => BETS[s.bet] ?? BETS[0];
 export const spinCost = (s, count = s.multi) => currentBet(s).cost * count;
+
+export const operatorOf = (s) => OPERATORS.find((o) => o.id === s.operator) ?? null;
+export const luckBestOf = (s) => operatorOf(s)?.luckBestOf ?? CONFIG.LUCK_BEST_OF;
+// Параметры генерации номера из настроек игрока: оператор тарифа и любимая цифра
+export const rollOpts = (s) => ({ op: s.operator ?? undefined, digit: s.digit ?? undefined });
 
 export const collectionValue = (s) => s.collection.reduce((a, x) => a + x.price, 0);
 
@@ -25,15 +30,15 @@ export function bailout(s) {
 // Удача работает только на обычной крутке, ставка с гарантией её не тратит
 function rollOne(s) {
   const bet = currentBet(s);
-  return bet.tier ? rollMin(bet.tier) : rollWithLuck(s);
+  return bet.tier ? rollMin(bet.tier, rollOpts(s)) : rollWithLuck(s);
 }
 
 function rollWithLuck(s) {
-  if (s.luck <= 0) return roll();
+  if (s.luck <= 0) return roll(rollOpts(s));
   s.luck--;
   let best = null;
-  for (let i = 0; i < CONFIG.LUCK_BEST_OF; i++) {
-    const it = roll();
+  for (let i = 0; i < luckBestOf(s); i++) {
+    const it = roll(rollOpts(s));
     if (!best || it.price > best.price) best = it;
   }
   best.lucky = true;
@@ -91,4 +96,32 @@ export function sellFromCollection(s, id) {
   const [it] = s.collection.splice(i, 1);
   s.balance += it.price;
   return it.price;
+}
+
+// ---------- Слияние: 3 номера одной редкости → 1 номер редкостью выше ----------
+// Итоговая ценность = сумма номеров минус комиссия: если средняя цена нужного класса выше, игрок доплачивает.
+export function craftQuote(items) {
+  if (items.length !== CRAFT.COUNT) return { error: `Нужно ${CRAFT.COUNT} номера` };
+  const tier = items[0].tier;
+  if (items.some((x) => x.tier !== tier)) return { error: 'Номера должны быть одной редкости' };
+  const target = BETS[tier + 1];
+  if (!target) return { error: 'Выше этой редкости слиять нельзя' };
+  const sum = items.reduce((a, x) => a + x.price, 0);
+  const fee = Math.max(0, Math.ceil((target.avg - sum * (1 - CRAFT.FEE)) / CRAFT.ROUND) * CRAFT.ROUND);
+  return { tier, targetTier: tier + 1, target, sum, fee };
+}
+
+export function craft(s, ids) {
+  if (new Set(ids).size !== ids.length) return { error: 'Выбери разные номера' };
+  const items = ids.map((id) => s.collection.find((x) => x.id === id));
+  if (items.some((x) => !x)) return { error: 'Номер не найден в коллекции' };
+  const q = craftQuote(items);
+  if (q.error) return q;
+  if (s.balance < q.fee) return { error: `Не хватает ${q.fee - s.balance} ₽ на доплату` };
+  s.balance -= q.fee;
+  s.collection = s.collection.filter((x) => !ids.includes(x.id));
+  const item = rollMin(q.targetTier, rollOpts(s));
+  s.collection.unshift(item);
+  s.stats.crafts++;
+  return { item, ...q };
 }

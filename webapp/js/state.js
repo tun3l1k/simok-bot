@@ -1,4 +1,4 @@
-import { CONFIG, BETS, COUNTRIES } from './config.js';
+import { CONFIG, BETS, COUNTRIES, OPERATORS } from './config.js';
 
 export const fresh = () => ({
   v: 1,
@@ -12,7 +12,9 @@ export const fresh = () => ({
   autoKeep: 0,
   bet: 0,        // индекс в BETS: 0 — обычная крутка
   country: 'ru',
-  stats: { spins: 0 },
+  operator: null, // id оператора из OPERATORS или null — «любой» (случайный, без бонуса)
+  digit: null,    // любимая цифра 0–9 или null
+  stats: { spins: 0, crafts: 0 },
   lastDaily: 0,
   ref: null,
 });
@@ -25,6 +27,9 @@ export function load() {
       const s = { ...fresh(), ...JSON.parse(raw) };
       if (!BETS[s.bet]) s.bet = 0;
       delete s.uiScale; // раньше был выбор размера интерфейса, теперь размер один
+      s.stats = { ...fresh().stats, ...s.stats };
+      if (s.operator && !OPERATORS.some((o) => o.id === s.operator)) s.operator = null;
+      if (!Number.isInteger(s.digit) || s.digit < 0 || s.digit > 9) s.digit = null;
       if (!COUNTRIES.some((c) => c.id === s.country && c.ready)) s.country = 'ru';
       return s;
     }
