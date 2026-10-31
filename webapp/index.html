@@ -17,7 +17,7 @@
         <div class="pill lvl"><span id="lvl">Ур. 1</span><i class="xp"><b id="xpbar"></b></i></div>
         <div class="pill luck" aria-label="Удача"><span class="clover" aria-hidden="true">🍀</span><span id="luck">0</span><em class="chip" id="luckChip">x2</em></div>
       </div>
-      <div class="seg" id="seg"><button class="on" data-go="play">SIM</button><button id="tariffsBtn" data-go="tariffs">Тарифы</button></div>
+      <div class="seg" id="seg"><button class="on" data-go="play">SIM</button><button id="tariffsBtn">Тарифы</button></div>
     </div>
     <div class="bal-col">
       <div class="balance"><small>Баланс</small><strong id="balance">0 ₽</strong></div>
@@ -51,12 +51,6 @@
       <div class="sell-line" id="sellLine"></div>
       </div>
 
-    </section>
-
-    <section id="view-tariffs" class="panel" data-view hidden>
-      <h2>Тарифы</h2>
-      <p class="muted">Оператор влияет на то, какие SIM выпадают: у каждого свой бонус. «Любой оператор» работает без бонусов.</p>
-      <ul class="list rows" id="tariffList"></ul>
     </section>
 
     <section id="view-collection" class="panel" data-view hidden>
@@ -143,10 +137,10 @@
 <dialog id="countrySheet" class="sheet">
   <div class="grab"></div>
   <h2>Какие SIM крутить</h2>
-  <p class="muted center">Выбери страну. У каждой будут свои операторы</p>
+  <p class="muted center">Выбери страну и оператора. У каждого свои коды и регионы, бонусов нет</p>
   <div class="countries" id="countryGrid"></div>
   <ul class="list rows" id="operList"></ul>
-  <p class="muted center small">Операторы выбранной страны появятся позже</p>
+  <p class="muted center small" id="operFoot"></p>
 </dialog>
 
 <dialog id="betSheet" class="sheet">

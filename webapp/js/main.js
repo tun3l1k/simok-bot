@@ -19,7 +19,6 @@ function renderAll() {
   ui.renderControls(state);
   ui.renderPlay(state, view);
   ui.renderCollection(state);
-  ui.renderTariffs(state);
   ui.renderMore(state);
   save(state);
 }
@@ -75,7 +74,15 @@ $('countryGrid').onclick = (e) => {
   renderAll();
   $('countrySheet').close();
 };
-$('operList').onclick = () => ui.toast('Операторы страны появятся позже');
+$('operList').onclick = (e) => {
+  const row = e.target.closest('[data-oper-id]');
+  if (!row) return;
+  state.operator = row.dataset.operId || null;
+  haptic();
+  renderAll();
+  $('countrySheet').close();
+};
+$('tariffsBtn').onclick = () => ui.toast('Тарифы скоро');
 
 $('betBtn').onclick = () => { ui.renderBetSheet(state); $('betSheet').showModal(); };
 $('betList').onclick = (e) => {
@@ -120,17 +127,6 @@ const goView = (e) => {
 };
 $('nav').onclick = goView;
 $('seg').onclick = goView;
-
-// Тарифы: выбор оператора
-$('tariffList').onclick = (e) => {
-  const row = e.target.closest('[data-oper-id]');
-  if (!row) return;
-  state.operator = row.dataset.operId || null;
-  const op = OPERATORS.find((o) => o.id === state.operator);
-  ui.toast(op ? `${op.name} «${op.tag}»: ${op.perk}` : 'Любой оператор: без бонусов');
-  haptic();
-  renderAll();
-};
 
 // Любимая цифра
 $('digitList').onclick = (e) => {

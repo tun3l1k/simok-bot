@@ -5,7 +5,7 @@ export const currentBet = (s) => BETS[s.bet] ?? BETS[0];
 export const spinCost = (s, count = s.multi) => currentBet(s).cost * count;
 
 export const operatorOf = (s) => OPERATORS.find((o) => o.id === s.operator) ?? null;
-export const luckBestOf = (s) => operatorOf(s)?.luckBestOf ?? CONFIG.LUCK_BEST_OF;
+export const luckBestOf = () => CONFIG.LUCK_BEST_OF;
 // Параметры генерации номера из настроек игрока: оператор тарифа и любимая цифра
 export const rollOpts = (s) => ({ op: s.operator ?? undefined, digit: s.digit ?? undefined });
 

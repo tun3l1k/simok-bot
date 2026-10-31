@@ -53,17 +53,11 @@ BETS.forEach((b) => {
   console.log(`  ${b.name.padEnd(10)} ${String(b.cost).padStart(7)} ₽ → ${mean.toFixed(0).padStart(7)} ₽ (${((mean / b.cost) * 100).toFixed(0)}%, avg в config ${b.avg}, минимум ${min} ₽)`);
 });
 
-// Операторы: бонус не должен разгонять экономику больше чем на ~10%
-console.log('Операторы (обычная крутка, без Удачи):');
+// Операторы: бонусов нет, средняя цена должна быть у всех примерно одинаковой
+console.log('Операторы (обычная крутка, без бонусов):');
 for (const o of OPERATORS) {
   const m = avg(() => roll({ op: o.id }).price);
-  const lk = avg(() => {
-    const n = o.luckBestOf ?? CONFIG.LUCK_BEST_OF;
-    let best = 0;
-    for (let i = 0; i < n; i++) best = Math.max(best, roll({ op: o.id }).price);
-    return best;
-  });
-  console.log(`  ${o.name} «${o.tag}»: ${m.toFixed(0)} ₽ (${pct(m)}, ${((m / base - 1) * 100).toFixed(1)}% к базе); с Удачей ${lk.toFixed(0)} ₽ (${((lk / luck2 - 1) * 100).toFixed(1)}% к базе с Удачей)`);
+  console.log(`  ${o.name.padEnd(8)} ${m.toFixed(0)} ₽ (${pct(m)}, ${((m / base - 1) * 100).toFixed(1)}% к среднему по всем)`);
 }
 
 // Любимая цифра: средний вклад бонуса в цену

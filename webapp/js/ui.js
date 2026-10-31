@@ -16,7 +16,7 @@ export function renderHud(s) {
 
 export function renderControls(s) {
   $('multiBtn').textContent = `${s.multi}×`;
-  $('countryBtn').innerHTML = `${countryOf(s).flag}<span>${countryOf(s).name}</span>`;
+  $('countryBtn').innerHTML = `${countryOf(s).flag}<span>${countryOf(s).name}${operatorOf(s) ? ` · ${operatorOf(s).name}` : ''}</span>`;
   const bet = currentBet(s);
   const betBtn = $('betBtn');
   betBtn.textContent = `Ставка: ${bet.name}`;
@@ -48,10 +48,18 @@ export function renderBetSheet(s) {
 export function renderCountrySheet(s) {
   $('countryGrid').innerHTML = COUNTRIES.map((c) =>
     `<button class="country${c.id === s.country ? ' on' : ''}${c.ready ? '' : ' soon'}" data-country="${c.id}">${c.flag}<span>${c.name}</span></button>`).join('');
-  const sim = OPERATORS.map((o) => o.name).join(' · ');
-  $('operList').innerHTML = `<li><button class="row on" style="--tier:#fff" data-oper="any">
-    <span class="sim-mini" aria-hidden="true"></span>
-    <span class="row-text"><b class="row-title">Любой оператор</b><small>${sim}</small></span><i class="tick" aria-hidden="true"></i></button></li>`;
+  const short = (arr, n) => arr.slice(0, n).join(', ') + (arr.length > n ? '…' : '');
+  const cities = (o) => short([...new Set(o.codes.map((c) => c.city))].filter((c) => c !== 'Россия'), 3);
+  const rows = [
+    { id: '', name: 'Любой оператор', sub: OPERATORS.map((o) => o.name).join(' · '), c: ['#f4f1ff', '#cfc6f0', '#a99be0'] },
+    ...OPERATORS.map((o) => ({ id: o.id, name: o.name, sub: `${cities(o)} · ${short(o.codes.map((c) => c.code), 4)}`, c: o.c })),
+  ];
+  $('operList').innerHTML = rows.map((r) =>
+    `<li><button class="row${(s.operator ?? '') === r.id ? ' on' : ''}" data-oper-id="${r.id}" style="--tier:#fff">
+      <span class="sim-mini" style="background:linear-gradient(135deg,${r.c[0]},${r.c[1]} 55%,${r.c[2]})" aria-hidden="true"></span>
+      <span class="row-text"><b class="row-title">${r.name}</b><small>${r.sub}</small></span><i class="tick" aria-hidden="true"></i></button></li>`).join('');
+  const op = operatorOf(s);
+  $('operFoot').textContent = op ? `Крутятся только SIM ${op.name}` : 'Крутятся SIM всех операторов поровну';
 }
 
 // view = { item, kept } | { item: null }
@@ -159,19 +167,6 @@ export function renderDigits(s) {
     `<button class="${s.digit === c.v ? 'on' : ''}" data-digit="${c.v ?? ''}" aria-pressed="${s.digit === c.v}">${c.label}</button>`).join('');
   $('digitHint').textContent = s.digit === null ? 'не выбрана' : `цифра ${s.digit}`;
   $('digitNote').textContent = 'В номере из 7 цифр: ' + [...DIGIT_BONUS].reverse().map((b) => `от ${b.min} ×${formatMult(b.mult)}`).join(', ') + '. Действует на новые номера.';
-}
-
-// ---------- Тарифы ----------
-export function renderTariffs(s) {
-  const rows = [
-    { id: null, name: 'Любой оператор', tag: '', perk: 'Случайный оператор, без бонусов', c: ['#f4f1ff', '#cfc6f0', '#a99be0'] },
-    ...OPERATORS.map((o) => ({ id: o.id, name: o.name, tag: o.tag, perk: o.perk, c: o.c })),
-  ];
-  $('tariffList').innerHTML = rows.map((r) =>
-    `<li><button class="row${(s.operator ?? null) === r.id ? ' on' : ''}" data-oper-id="${r.id ?? ''}" style="--tier:#fff">
-      <span class="sim-mini" style="background:linear-gradient(135deg,${r.c[0]},${r.c[1]} 55%,${r.c[2]})" aria-hidden="true"></span>
-      <span class="row-text"><b class="row-title">${r.name}${r.tag ? `<span class="tag">${r.tag}</span>` : ''}</b><small>${r.perk}</small></span>
-      <i class="tick" aria-hidden="true"></i></button></li>`).join('');
 }
 
 // ---------- Разбор номера ----------

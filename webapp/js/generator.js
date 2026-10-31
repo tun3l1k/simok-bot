@@ -1,4 +1,4 @@
-import { CONFIG, TIERS, CODES, OPERATORS, DIGIT_BONUS } from './config.js';
+import { CONFIG, TIERS, DIGIT_BONUS, codesOf } from './config.js';
 
 const rand = (a, b) => a + Math.random() * (b - a);
 const dig = () => Math.floor(Math.random() * 10);
@@ -104,39 +104,31 @@ function makeItem(region, body, base, opts = {}) {
   const price = priceOf(base, region, series, dig);
   return {
     id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
-    op: opts.op ?? pick(OPERATORS).id, code: region.code, city: region.city, body,
+    op: region.op, code: region.code, city: region.city, body,
     base, regionMult: region.mult, series, odds: oddsOf(series), digit: dig,
     price, tier: tierOf(price), lucky: false,
   };
 }
 
 const rollBase = () => Math.round(rand(CONFIG.BASE_MIN, CONFIG.BASE_MAX));
-const perkOf = (opts) => OPERATORS.find((o) => o.id === opts.op) ?? {};
-
-// Региональные веса с учётом бонуса оператора (МГС: Москва чаще, Билайт: Питер, Теле3: коды 900/999)
-function pickRegion(opts) {
-  const { cityBoost = {}, codeBoost = {} } = perkOf(opts);
-  return pickWeighted(CODES, (c) => c.w * (cityBoost[c.city] ?? 1) * (codeBoost[c.code] ?? 1));
-}
-
 export function roll(opts = {}) {
-  const region = pickRegion(opts);
-  const boost = perkOf(opts).patternBoost ?? CONFIG.PATTERN_BOOST;
-  const body = Math.random() < boost ? pick(BUILDERS)() : digits(7);
+  const region = pickWeighted(codesOf(opts.op));
+  const body = Math.random() < CONFIG.PATTERN_BOOST ? pick(BUILDERS)() : digits(7);
   return makeItem(region, body, rollBase(), opts);
 }
 
 // Вес каждой серии среди номеров нужной редкости: частота серии × шанс, что база и код региона
 // вообще дотянут до цены. Так распределение совпадает с честным «крутить, пока не выпадет», но быстро.
 const tierWeights = {};
-function seriesWeights(minTier) {
-  if (tierWeights[minTier]) return tierWeights[minTier];
+function seriesWeights(minTier, codes, key) {
+  const k = `${minTier}:${key}`;
+  if (tierWeights[k]) return tierWeights[k];
   const need = TIERS[minTier].min;
   const span = CONFIG.BASE_MAX - CONFIG.BASE_MIN + 1;
-  const totalW = CODES.reduce((s, r) => s + r.w, 0);
-  return (tierWeights[minTier] = SERIES.map((s) => {
+  const totalW = codes.reduce((s, r) => s + r.w, 0);
+  return (tierWeights[k] = SERIES.map((s) => {
     let reach = 0;
-    for (const r of CODES) {
+    for (const r of codes) {
       let n = 0;
       for (let b = CONFIG.BASE_MIN; b <= CONFIG.BASE_MAX; b++) if (b * r.mult * s.mult >= need) n++;
       reach += (r.w / totalW) * (n / span);
@@ -149,9 +141,10 @@ function seriesWeights(minTier) {
 export function rollMin(minTier, opts = {}) {
   if (!minTier) return roll(opts);
   const need = TIERS[minTier].min;
-  const { s } = pickWeighted(seriesWeights(minTier));
+  const pool = codesOf(opts.op);
+  const { s } = pickWeighted(seriesWeights(minTier, pool, opts.op ?? 'any'));
   for (let i = 0; i < 5000; i++) {
-    const region = pickRegion(opts);
+    const region = pickWeighted(pool);
     const base = rollBase();
     if (base * region.mult * s.mult < need) continue;
     const item = makeItem(region, s.make(), base, opts);

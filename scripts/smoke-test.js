@@ -34,16 +34,22 @@ BETS.forEach((b, i) => {
 });
 SERIES.forEach((x) => assert.ok((detectSeries(x.make())?.mult ?? 0) >= x.mult, `конструктор серии «${x.name}»`));
 
-// операторы: у каждого свой бонус, номер выпадает именно этого оператора
-OPERATORS.forEach((o) => assert.equal(roll({ op: o.id }).op, o.id, `оператор ${o.id} попадает на SIM`));
+// операторы: у каждого свои коды, «любой» даёт все
+OPERATORS.forEach((o) => {
+  const own = new Set(o.codes.map((c) => c.code));
+  for (let i = 0; i < 2000; i++) {
+    const it = roll({ op: o.id });
+    assert.equal(it.op, o.id, `оператор ${o.id} попадает на SIM`);
+    assert.ok(own.has(it.code), `код ${it.code} принадлежит ${o.id}`);
+  }
+  for (let i = 0; i < 200; i++) assert.ok(own.has(rollMin(2, { op: o.id }).code), `ставка: код ${o.id}`);
+});
 {
-  const t = fresh(); t.operator = 'megafox';
-  assert.equal(game.luckBestOf(t), 3, 'MegaFox: удача берёт лучший из 3');
-  assert.equal(game.luckBestOf(fresh()), 2, 'без оператора лучший из 2');
-  const share = (op, f) => { let n = 0; for (let i = 0; i < 20000; i++) if (f(roll({ op }))) n++; return n / 20000; };
-  assert.ok(share('mgs', (x) => x.city === 'Москва') > share('yoga', (x) => x.city === 'Москва') + 0.1, 'МГС: Москва выпадает заметно чаще');
-  assert.ok(share('bilait', (x) => x.city === 'Санкт-Петербург') > share('yoga', (x) => x.city === 'Санкт-Петербург') + 0.1, 'Билайт: Питер чаще');
-  assert.ok(share('tele3', (x) => x.code === '900' || x.code === '999') > share('yoga', (x) => x.code === '900' || x.code === '999') * 2, 'Теле3: коды 900/999 чаще');
+  const all = new Set(OPERATORS.flatMap((o) => o.codes.map((c) => c.code)));
+  assert.equal(all.size, OPERATORS.reduce((n, o) => n + o.codes.length, 0), 'коды у операторов не повторяются');
+  const seen = new Set();
+  for (let i = 0; i < 6000; i++) seen.add(roll().op);
+  assert.equal(seen.size, OPERATORS.length, 'без выбора выпадают все операторы');
 }
 
 // любимая цифра: бонус растёт с числом цифр и попадает в цену
