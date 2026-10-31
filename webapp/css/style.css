@@ -76,14 +76,17 @@ main{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;marg
 .stage{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:7.5px;min-height:0}
 .stage>*{max-width:100%}
 .sim-wrap{align-self:center;width:100%;max-width:342px;filter:drop-shadow(0 9.5px 21px rgba(255,255,255,.14));filter:drop-shadow(0 9.5px 21px color-mix(in srgb,var(--tier) 40%,transparent));transition:filter .3s}
-.sim{--c1:#f4f1ff;--c2:#cfc6f0;--c3:#a99be0;aspect-ratio:300/180;padding:15px 19px;border-radius:21px;position:relative;color:#17112b;
-  background:linear-gradient(135deg,var(--c1) 0%,var(--c2) 55%,var(--c3) 100%);
+.sim{aspect-ratio:300/180;padding:15px 19px;border-radius:21px;position:relative;overflow:hidden;color:#17112b;background:#cfc6f0;
   clip-path:polygon(0 0,100% 0,100% calc(100% - 30.5px),calc(100% - 30.5px) 100%,0 100%)}
+.sim-art{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none}
+.sim-top,.chip-svg,.sim-number{position:relative}
 .sim-top{display:flex;justify-content:space-between;align-items:flex-start}
-.op{font-weight:900;font-size:21px;letter-spacing:1px}
+.op{display:flex;align-items:center;gap:7px;font-weight:900;font-size:21px;letter-spacing:.5px}
+#simLogo{display:flex}
+#simLogo:empty{display:none}
 .city{font-size:12.5px;font-weight:700;opacity:.7}
 .chip-svg{display:block;margin-top:9.5px;width:49.5px;height:37px}
-.sim-number{position:absolute;left:19px;bottom:15px;font-size:clamp(19px,6.6vw,25.5px);font-weight:800;letter-spacing:.5px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.sim-number{position:absolute !important;left:19px;bottom:15px;font-size:clamp(19px,6.6vw,25.5px);font-weight:800;letter-spacing:.5px;white-space:nowrap;font-variant-numeric:tabular-nums}
 .sim.rolling .sim-number{opacity:.75}
 
 .info{text-align:center;font-size:12.5px;line-height:1.45;color:var(--mut)}
@@ -153,8 +156,9 @@ dialog.sheet h2{text-align:center;margin:0 0 7.5px;font-size:23px}
 .country span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .country.on{background:#4a4458}
 .country.soon{opacity:.75}
-.sim-mini{flex:none;width:53px;height:34px;border-radius:6.5px;position:relative;background:linear-gradient(135deg,#f4f1ff,#cfc6f0 55%,#a99be0);clip-path:polygon(0 0,100% 0,100% calc(100% - 9.5px),calc(100% - 9.5px) 100%,0 100%)}
-.sim-mini::after{content:"";position:absolute;left:7.5px;top:8.5px;width:15px;height:11.5px;border-radius:3px;background:#e6c25a}
+.sim-mini{flex:none;width:53px;height:34px;border-radius:6.5px;position:relative;overflow:hidden;background:#cfc6f0;clip-path:polygon(0 0,100% 0,100% calc(100% - 9.5px),calc(100% - 9.5px) 100%,0 100%)}
+.sim-mini svg{position:absolute;inset:0;width:100%;height:100%}
+.sim-mini::after{z-index:1;content:"";position:absolute;left:7.5px;top:8.5px;width:15px;height:11.5px;border-radius:3px;background:#e6c25a}
 .toast{position:fixed;left:50%;bottom:142.5px;transform:translate(-50%,19px);max-width:88vw;padding:9.5px 15px;border-radius:15px;background:#3a2f52;font-size:13.5px;font-weight:600;text-align:center;opacity:0;pointer-events:none;transition:.25s}
 .toast.show{opacity:1;transform:translate(-50%,0)}
 @media (max-height:700px){

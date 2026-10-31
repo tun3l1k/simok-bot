@@ -1,3 +1,4 @@
+import { skinOf } from './skins.js';
 import { CONFIG, TIERS, OPERATORS, AUTO_KEEP, BETS, COUNTRIES, SHOP_ITEMS, DIGIT_BONUS, xpForLevel } from './config.js';
 import { formatPhone, formatMoney, formatMult } from './generator.js';
 import { collectionValue, currentBet, spinCost, operatorOf, luckBestOf, craftQuote } from './game.js';
@@ -56,7 +57,7 @@ export function renderCountrySheet(s) {
   ];
   $('operList').innerHTML = rows.map((r) =>
     `<li><button class="row${(s.operator ?? '') === r.id ? ' on' : ''}" data-oper-id="${r.id}" style="--tier:#fff">
-      <span class="sim-mini" style="background:linear-gradient(135deg,${r.c[0]},${r.c[1]} 55%,${r.c[2]})" aria-hidden="true"></span>
+      <span class="sim-mini" style="background:${skinOf(r.id).bg}" aria-hidden="true"><svg viewBox="0 0 300 180" preserveAspectRatio="xMidYMid slice">${skinOf(r.id).art}</svg></span>
       <span class="row-text"><b class="row-title">${r.name}</b><small>${r.sub}</small></span><i class="tick" aria-hidden="true"></i></button></li>`).join('');
   const op = operatorOf(s);
   $('operFoot').textContent = op ? `Крутятся только SIM ${op.name}` : 'Крутятся SIM всех операторов поровну';
@@ -71,7 +72,11 @@ export function renderPlay(s, view) {
   const play = $('view-play');
   play.style.setProperty('--tier', tier.color);
   const sim = $('sim');
-  ['--c1', '--c2', '--c3'].forEach((v, i) => sim.style.setProperty(v, op.c[i]));
+  const skin = skinOf(op.id);
+  sim.style.background = skin.bg;
+  sim.style.color = skin.ink;
+  $('simArt').innerHTML = skin.art;
+  $('simLogo').innerHTML = skin.logo;
 
   $('simOp').textContent = op.name;
   $('simCity').textContent = item ? `4G · ${item.city}` : '4G';
