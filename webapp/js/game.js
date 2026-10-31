@@ -1,5 +1,5 @@
-import { CONFIG, AUTO_KEEP, BETS, OPERATORS, CRAFT, xpForLevel, levelReward } from './config.js';
-import { roll, rollMin } from './generator.js';
+import { CONFIG, AUTO_SELL, BETS, OPERATORS, CRAFT, xpForLevel, levelReward } from './config.js?v=mvx1y7yd';
+import { roll, rollMin } from './generator.js?v=mvx1y7yd';
 
 export const currentBet = (s) => BETS[s.bet] ?? BETS[0];
 export const spinCost = (s, count = s.multi) => currentBet(s).cost * count;
@@ -19,6 +19,20 @@ export function claimDaily(s, now = Date.now()) {
   s.lastDaily = now;
   s.balance += d.balance;
   return d;
+}
+
+// Положить номер в коллекцию. Если она переполнена (CONFIG.COLLECTION_MAX), самый дешёвый номер продаётся сам.
+export function addToCollection(s, item) {
+  s.collection.unshift(item);
+  const sold = [];
+  while (s.collection.length > CONFIG.COLLECTION_MAX) {
+    let k = 0;
+    s.collection.forEach((x, i) => { if (x.price < s.collection[k].price) k = i; });
+    const [it] = s.collection.splice(k, 1);
+    s.balance += it.price;
+    sold.push(it);
+  }
+  return sold;
 }
 
 // Если денег нет, а продавать нечего, игра не должна встать
@@ -48,12 +62,14 @@ function rollWithLuck(s) {
 
 export function spin(s, count) {
   const cost = spinCost(s, count);
-  const pendingPrice = s.pending ? s.pending.price : 0;
-  if (s.balance + pendingPrice < cost) {
+  if (s.balance < cost) {
     return { error: s.bet ? 'Не хватает денег на эту ставку. Выбери ставку дешевле или продай номер.' : 'Не хватает денег. Продай что-нибудь из коллекции.' };
   }
 
-  s.balance += pendingPrice - cost; // прошлый номер продаётся автоматически
+  s.balance -= cost;
+  // прошлый номер, который игрок не продал, уходит в коллекцию сам
+  const moved = s.pending;
+  const overflow = moved ? addToCollection(s, moved) : [];
   s.pending = null;
 
   let best = null, autoSold = 0, luckUsed = 0;
@@ -67,8 +83,8 @@ export function spin(s, count) {
     s.balance += drop.price;
   }
 
-  const kept = best.tier >= AUTO_KEEP[s.autoKeep].tier;
-  if (kept) s.collection.unshift(best); else s.pending = best;
+  const soldNow = best.tier <= AUTO_SELL[s.autoSell].maxTier;
+  if (soldNow) s.balance += best.price; else s.pending = best;
 
   s.stats.spins += count;
   s.luckSpins += count;
@@ -83,17 +99,10 @@ export function spin(s, count) {
     s.balance += r.balance;
     levelUps.push({ level: s.level, ...r });
   }
-  return { item: best, kept, autoSold, pendingPrice, luckUsed, luckEarned, levelUps };
+  return { item: best, soldNow, autoSold, moved, overflow, luckUsed, luckEarned, levelUps };
 }
 
-export function keepPending(s) {
-  if (!s.pending) return false;
-  s.collection.unshift(s.pending);
-  s.pending = null;
-  return true;
-}
-
-// Продать выпавший, но ещё не сохранённый номер сразу
+// Продать только что выпавший номер сразу
 export function sellPending(s) {
   if (!s.pending) return 0;
   const price = s.pending.price;

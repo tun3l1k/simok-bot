@@ -1,7 +1,7 @@
-import { skinOf } from './skins.js';
-import { CONFIG, TIERS, OPERATORS, AUTO_KEEP, BETS, COUNTRIES, SHOP_ITEMS, DIGIT_BONUS, xpForLevel } from './config.js';
-import { formatPhone, formatMoney, formatMult } from './generator.js';
-import { collectionValue, currentBet, spinCost, operatorOf, luckBestOf, luckLeft, craftQuote } from './game.js';
+import { skinOf } from './skins.js?v=mvx1y7yd';
+import { CONFIG, TIERS, OPERATORS, AUTO_SELL, BETS, COUNTRIES, SHOP_ITEMS, DIGIT_BONUS, xpForLevel } from './config.js?v=mvx1y7yd';
+import { formatPhone, formatMoney, formatMult } from './generator.js?v=mvx1y7yd';
+import { collectionValue, currentBet, spinCost, operatorOf, luckBestOf, luckLeft, craftQuote } from './game.js?v=mvx1y7yd';
 
 export const countryOf = (s) => COUNTRIES.find((c) => c.id === s.country) ?? COUNTRIES[0];
 
@@ -28,7 +28,7 @@ export function renderControls(s) {
 }
 
 export function renderBetSheet(s) {
-  const funds = s.balance + (s.pending ? s.pending.price : 0);
+  const funds = s.balance;
   $('betList').innerHTML = BETS.map((b, i) => {
     const t = TIERS[b.tier];
     const title = b.tier ? `${t.name} и выше` : 'Обычная крутка';
@@ -67,7 +67,7 @@ export function renderCountrySheet(s) {
 
 // view = { item, kept } | { item: null }
 export function renderPlay(s, view) {
-  const { item, kept } = view;
+  const { item } = view;
   const tier = TIERS[item ? item.tier : 0];
   const op = OPERATORS.find((o) => o.id === item?.op) ?? operatorOf(s) ?? OPERATORS[0];
 
@@ -104,17 +104,15 @@ export function renderPlay(s, view) {
   const sold = !!item && !canKeep && !inColl;
   $('sellBtn').disabled = !(canKeep || inColl);
   $('sellBtn').textContent = sold ? `Продано за ${formatMoney(item.price)}` : item ? `Продать за ${formatMoney(item.price)}` : 'Продать';
-  $('keepBtn').disabled = !canKeep;
-  $('keepBtn').textContent = inColl ? 'В коллекции' : 'В коллекцию';
   $('shareBtn').disabled = !item;
-  $('sellLine').textContent = canKeep ? 'Не сохранишь, продастся сам при следующей крутке' : '';
+  $('sellLine').textContent = canKeep ? 'Крутишь дальше: номер сам уйдёт в коллекцию' : inColl ? 'Номер в коллекции' : '';
   $('spinLabel').textContent = item ? 'Крутить ещё' : 'Крутить';
 }
 
 export function renderCollection(s) {
   const items = [...s.collection].sort((a, b) => b.price - a.price);
   $('collectionTotal').textContent = items.length
-    ? `${items.length} шт. на ${formatMoney(collectionValue(s))}`
+    ? `${items.length} из ${CONFIG.COLLECTION_MAX} шт. на ${formatMoney(collectionValue(s))}`
     : '';
   $('collectionList').innerHTML = items.length
     ? items.map((it) => {
@@ -125,7 +123,7 @@ export function renderCollection(s) {
           <div class="right"><b>${formatMoney(it.price)}</b><button class="sell" data-sell="${it.id}">Продать</button></div>
         </li>`;
       }).join('')
-    : '<li class="empty">Пока пусто. Нажми «В коллекцию» на понравившемся номере.</li>';
+    : `<li class="empty">Пока пусто. Номера попадают сюда сами, когда крутишь дальше (до ${CONFIG.COLLECTION_MAX} шт.).</li>`;
 }
 
 export function renderMore(s) {
@@ -141,15 +139,15 @@ export function renderMore(s) {
   const stat = (icon, val, label) => `<div class="stat"><span aria-hidden="true">${icon}</span><b>${val}</b><small>${label}</small></div>`;
   $('statsGrid').innerHTML =
     stat('🎰', s.stats.spins.toLocaleString('ru-RU'), 'круток') +
-    stat('📱', s.collection.length.toLocaleString('ru-RU'), 'в коллекции') +
+    stat('📱', `${s.collection.length}/${CONFIG.COLLECTION_MAX}`, 'в коллекции') +
     stat('💰', formatMoney(collectionValue(s)), 'цена коллекции') +
     stat('🔥', s.stats.crafts.toLocaleString('ru-RU'), 'слияний');
   const d = CONFIG.DAILY_BONUS;
   const wait = s.lastDaily + d.cooldownH * 3600e3 - Date.now();
   $('dailySub').textContent = wait > 0 ? `Через ${Math.ceil(wait / 3600e3)} ч` : `Забери ${formatMoney(d.balance)}`;
   $('dailySub').classList.toggle('ok', wait <= 0);
-  $('settingsSub').textContent = `Автосохранение: ${AUTO_KEEP[s.autoKeep].label}${s.digit !== null ? ` · цифра ${s.digit}` : ''}`;
-  $('autoBtn').textContent = `Автосохранение: ${AUTO_KEEP[s.autoKeep].label}`;
+  $('settingsSub').textContent = `Автопродажа: ${AUTO_SELL[s.autoSell].label}${s.digit !== null ? ` · цифра ${s.digit}` : ''}`;
+  $('autoBtn').textContent = `Автопродажа: ${AUTO_SELL[s.autoSell].label}`;
   renderDigits(s);
 }
 

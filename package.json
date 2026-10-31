@@ -8,7 +8,8 @@
   "scripts": {
     "web": "npx --yes serve webapp -l 5173",
     "bot": "node --env-file=.env bot/index.js",
-    "sim": "node scripts/simulate.js"
+    "sim": "node scripts/simulate.js",
+    "stamp": "node scripts/stamp.js"
   },
   "dependencies": { "grammy": "^1.30.0" }
 }

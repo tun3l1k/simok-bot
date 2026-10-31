@@ -1,4 +1,4 @@
-import { CONFIG, BETS, COUNTRIES, OPERATORS } from './config.js';
+import { CONFIG, AUTO_SELL, BETS, COUNTRIES, OPERATORS } from './config.js?v=mvx1y7yd';
 
 export const fresh = () => ({
   v: 1,
@@ -8,9 +8,9 @@ export const fresh = () => ({
   level: 1,
   xp: 0,
   collection: [],
-  pending: null, // выпавший, но ещё не сохранённый номер (продастся при следующей крутке)
+  pending: null, // выпавший номер: уйдёт в коллекцию при следующей крутке, пока его не продали
   multi: 1,
-  autoKeep: 0,
+  autoSell: 0,   // индекс в AUTO_SELL
   bet: 0,        // индекс в BETS: 0 — обычная крутка
   country: 'ru',
   operator: null, // id оператора из OPERATORS или null — «любой» (случайный, без бонуса)
@@ -27,6 +27,8 @@ export function load() {
     if (raw) {
       const s = { ...fresh(), ...JSON.parse(raw) };
       if (!BETS[s.bet]) s.bet = 0;
+      delete s.autoKeep;
+      if (!AUTO_SELL[s.autoSell]) s.autoSell = 0;
       delete s.uiScale; // раньше был выбор размера интерфейса, теперь размер один
       s.stats = { ...fresh().stats, ...s.stats };
       if (!Number.isInteger(s.luck) || s.luck < 0) s.luck = 0;

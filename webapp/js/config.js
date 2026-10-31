@@ -1,5 +1,5 @@
 // Все числа экономики и контента живут здесь. Меняй и проверяй: npm run sim
-import { FLAGS } from './flags.js';
+import { FLAGS } from './flags.js?v=mvx1y7yd';
 
 export const CONFIG = {
   SAVE_KEY: 'simok_save_v1',
@@ -9,6 +9,7 @@ export const CONFIG = {
   START_LUCK: 0,
   LUCK_EVERY: 100,            // каждые N круток копится заряд Удачи
   LUCK_BEST_OF: 2,            // заряд делает одну крутку «лучший из N номеров»
+  COLLECTION_MAX: 50,         // больше номеров в коллекции не помещается: самый дешёвый продаётся сам
   MULTI_OPTIONS: [1, 5, 10],
   BASE_MIN: 70,
   BASE_MAX: 210,
@@ -31,10 +32,12 @@ export const TIERS = [
   { name: 'Мифический',   min: 250000,  color: '#ff4d6d' },
 ];
 
-export const AUTO_KEEP = [
-  { label: 'Выкл', tier: 99 },
-  { label: 'Редкий+', tier: 2 },
-  { label: 'Эпический+', tier: 3 },
+// Автопродажа: номера этой редкости и ниже продаются сразу после крутки
+export const AUTO_SELL = [
+  { label: 'Выкл', maxTier: -1 },
+  { label: 'Обычные', maxTier: 0 },
+  { label: 'До Необычных', maxTier: 1 },
+  { label: 'До Редких', maxTier: 2 },
 ];
 
 // Операторы России: пародии на реальных, чтобы не пересекаться с брендами. Бонусов нет, отличаются только коды и регионы.

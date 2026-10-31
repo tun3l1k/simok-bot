@@ -10,9 +10,10 @@ const start = s.balance;
 let r = game.spin(s, 1);
 assert.ok(r.item && s.pending, 'после крутки есть номер');
 assert.ok(s.balance === start - 500 || r.levelUps.length, 'деньги списались');
-assert.ok(game.keepPending(s) && s.collection.length === 1, 'номер сохранился');
-const id = s.collection[0].id;
-assert.ok(game.sellFromCollection(s, id) > 0 && s.collection.length === 0, 'номер продался');
+r = game.spin(s, 1);
+assert.ok(s.collection.length === 1 || r.soldNow, 'прошлый номер ушёл в коллекцию сам');
+const id = s.collection[0]?.id;
+if (s.collection.length) assert.ok(game.sellFromCollection(s, id) > 0 && s.collection.length === 0, 'номер продался');
 r = game.spin(s, 10);
 assert.ok(r.item, 'мульти-крутка работает');
 s.balance = 0; s.pending = null; s.collection = [];
@@ -119,7 +120,7 @@ console.log('Все проверки пройдены');
 {
   const t = fresh(); const b0 = t.balance;
   const r = game.spin(t, 1); const after = t.balance;
-  if (!r.kept) {
+  if (!r.soldNow) {
     assert.equal(game.sellPending(t), r.item.price, 'продали по цене номера');
     assert.equal(t.balance, after + r.item.price);
     assert.equal(t.pending, null);
@@ -127,3 +128,28 @@ console.log('Все проверки пройдены');
   }
 }
 console.log('Удача и продажа: ок');
+
+// Коллекция до 50: лишнее продаётся, остаются самые дорогие
+{
+  const t = fresh(); t.balance = 1e9;
+  const items = Array.from({ length: CONFIG.COLLECTION_MAX }, (_, i) => ({ ...roll(), id: 'x' + i, price: 1000 + i * 10 }));
+  t.collection = items; const b0 = t.balance;
+  const sold = game.addToCollection(t, { ...roll(), id: 'new', price: 5 });
+  assert.equal(t.collection.length, CONFIG.COLLECTION_MAX, 'коллекция не больше лимита');
+  assert.equal(sold.length, 1); assert.equal(sold[0].id, 'new', 'самый дешёвый (новый) продан');
+  assert.equal(t.balance, b0 + 5);
+  const sold2 = game.addToCollection(t, { ...roll(), id: 'rich', price: 99999 });
+  assert.equal(sold2[0].id, 'x0', 'при переполнении продан самый дешёвый из коллекции');
+  assert.ok(t.collection.some((x) => x.id === 'rich'));
+}
+// Автопродажа и уход номера в коллекцию
+{
+  const t = fresh(); t.balance = 1e9; t.autoSell = 3; // до Редких
+  const r = game.spin(t, 1);
+  if (r.item.tier <= 2) { assert.ok(r.soldNow && !t.pending, 'автопродажа продала сразу'); }
+  const u = fresh(); u.balance = 1e9;
+  const a = game.spin(u, 1); const had = u.pending?.id;
+  game.spin(u, 1);
+  assert.ok(u.collection.some((x) => x.id === had) || a.soldNow, 'непроданный номер ушёл в коллекцию');
+}
+console.log('Коллекция 50 и автопродажа: ок');

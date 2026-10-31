@@ -1,14 +1,14 @@
-import { CONFIG, AUTO_KEEP, BETS, COUNTRIES, OPERATORS, SHOP_ITEMS } from './config.js';
-import { formatPhone, formatMoney } from './generator.js';
-import { load, save, fresh } from './state.js';
-import * as game from './game.js';
-import * as ui from './ui.js';
-import { $ } from './ui.js';
-import { initTelegram, haptic, hapticDone, shareText, inviteLink } from './telegram.js';
+import { CONFIG, AUTO_SELL, BETS, COUNTRIES, OPERATORS, SHOP_ITEMS, TIERS } from './config.js?v=mvx1y7yd';
+import { formatPhone, formatMoney, formatMult } from './generator.js?v=mvx1y7yd';
+import { load, save, fresh } from './state.js?v=mvx1y7yd';
+import * as game from './game.js?v=mvx1y7yd';
+import * as ui from './ui.js?v=mvx1y7yd';
+import { $ } from './ui.js?v=mvx1y7yd';
+import { initTelegram, haptic, hapticDone, shareText, inviteLink } from './telegram.js?v=mvx1y7yd';
 
 initTelegram();
 let state = load();
-let view = { item: state.pending, kept: false };
+let view = { item: state.pending };
 let busy = false;
 
 const ref = new URLSearchParams(location.search).get('ref');
@@ -36,13 +36,14 @@ async function onSpin() {
   }
   haptic('medium');
   await ui.animateNumber();
-  view = { item: res.item, kept: res.kept };
+  view = { item: res.item };
   renderAll();
   if (res.item.tier >= 2) hapticDone();
 
   const notes = [];
   if (state.multi > 1) notes.push(`Лучший из ${state.multi}. Остальные проданы за ${formatMoney(res.autoSold)}`);
-  if (res.kept) notes.push('Номер сразу ушёл в коллекцию');
+  if (res.soldNow) notes.push(`Автопродажа: +${formatMoney(res.item.price)}`);
+  res.overflow.forEach((o) => notes.push(`Коллекция полна (${CONFIG.COLLECTION_MAX}): продан самый дешёвый номер ${formatPhone(o)} за ${formatMoney(o.price)}`));
   res.levelUps.forEach((l) => notes.push(`Уровень ${l.level}: +${formatMoney(l.balance)}`));
   if (res.luckEarned) notes.push('🍀 Удача x2 готова: следующая крутка выберет лучший из двух');
   if (notes.length) ui.toast(notes.join('\n'));
@@ -56,7 +57,7 @@ $('multiBtn').onclick = () => {
   state.multi = o[(o.indexOf(state.multi) + 1) % o.length];
   renderAll();
 };
-$('autoBtn').onclick = () => { state.autoKeep = (state.autoKeep + 1) % AUTO_KEEP.length; renderAll(); };
+$('autoBtn').onclick = () => { state.autoSell = (state.autoSell + 1) % AUTO_SELL.length; renderAll(); };
 
 // Шторки: закрываются тапом по затемнению
 document.querySelectorAll('dialog.sheet').forEach((d) => d.addEventListener('click', (e) => {
@@ -95,9 +96,6 @@ $('betList').onclick = (e) => {
   $('betSheet').close();
 };
 
-$('keepBtn').onclick = () => {
-  if (game.keepPending(state)) { view = { ...view, kept: true }; haptic(); renderAll(); }
-};
 $('sellBtn').onclick = () => {
   const item = view.item;
   if (!item) return;
@@ -107,10 +105,24 @@ $('sellBtn').onclick = () => {
 $('luckPill').onclick = () => ui.toast(state.luck > 0
   ? `🍀 Удача x2 готова${state.luck > 1 ? ` (${state.luck} шт.)` : ''}: следующая крутка выберет лучший из двух`
   : `🍀 До Удачи x2 осталось ${game.luckLeft(state)} круток. Каждые ${CONFIG.LUCK_EVERY} круток = одна крутка «лучший из 2»`);
+// «Показать друзьям»: красивое сообщение с карточкой номера, редкостью и серией
+const TIER_DOT = ['⚪', '🟢', '🔵', '🟣', '🟠', '🔴'];
+function bragText(it) {
+  const op = OPERATORS.find((o) => o.id === it.op);
+  const t = TIERS[it.tier];
+  return [
+    `📱 ${op ? op.name : 'SIM'} · ${formatPhone(it)}`,
+    `${TIER_DOT[it.tier]} ${t.name} · ${formatMoney(it.price)}`,
+    it.series ? `✨ «${it.series.name}» ×${it.series.mult}${it.odds ? ` · шанс 1 из ${it.odds.toLocaleString('ru-RU')}` : ''}` : '',
+    it.digit ? `🎯 Любимая цифра ${it.digit.digit} ×${formatMult(it.digit.mult)}` : '',
+    'Выбей номер круче 👇',
+  ].filter(Boolean).join('\n');
+}
 $('shareBtn').onclick = () => {
   if (!view.item) return;
-  shareText(`Мне выпал номер ${formatPhone(view.item)} за ${formatMoney(view.item.price)}`, inviteLink(CONFIG.BOT_USERNAME));
+  shareText(bragText(view.item), inviteLink(CONFIG.BOT_USERNAME));
 };
+
 
 function openDetail(item, title) {
   if (!item) return;
@@ -183,7 +195,7 @@ $('dailyBtn').onclick = () => {
 };
 $('resetBtn').onclick = () => {
   if (!confirm('Сбросить весь прогресс?')) return;
-  state = fresh(); view = { item: null, kept: false }; renderAll(); ui.showView('play');
+  state = fresh(); view = { item: null }; renderAll(); ui.showView('play');
 };
 
 // Магазин: пока заглушка
