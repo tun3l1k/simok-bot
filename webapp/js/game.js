@@ -6,6 +6,8 @@ export const spinCost = (s, count = s.multi) => currentBet(s).cost * count;
 
 export const operatorOf = (s) => OPERATORS.find((o) => o.id === s.operator) ?? null;
 export const luckBestOf = () => CONFIG.LUCK_BEST_OF;
+// Сколько круток осталось до следующего заряда Удачи
+export const luckLeft = (s) => CONFIG.LUCK_EVERY - (s.luckSpins % CONFIG.LUCK_EVERY);
 // Параметры генерации номера из настроек игрока: оператор тарифа и любимая цифра
 export const rollOpts = (s) => ({ op: s.operator ?? undefined, digit: s.digit ?? undefined });
 
@@ -16,7 +18,6 @@ export function claimDaily(s, now = Date.now()) {
   if (now - s.lastDaily < d.cooldownH * 3600e3) return null;
   s.lastDaily = now;
   s.balance += d.balance;
-  s.luck += d.luck;
   return d;
 }
 
@@ -70,6 +71,9 @@ export function spin(s, count) {
   if (kept) s.collection.unshift(best); else s.pending = best;
 
   s.stats.spins += count;
+  s.luckSpins += count;
+  let luckEarned = 0;
+  while (s.luckSpins >= CONFIG.LUCK_EVERY) { s.luckSpins -= CONFIG.LUCK_EVERY; s.luck++; luckEarned++; }
   s.xp += CONFIG.XP_PER_SPIN * count;
   const levelUps = [];
   while (s.xp >= xpForLevel(s.level)) {
@@ -77,10 +81,9 @@ export function spin(s, count) {
     s.level++;
     const r = levelReward(s.level);
     s.balance += r.balance;
-    s.luck += r.luck;
     levelUps.push({ level: s.level, ...r });
   }
-  return { item: best, kept, autoSold, pendingPrice, luckUsed, levelUps };
+  return { item: best, kept, autoSold, pendingPrice, luckUsed, luckEarned, levelUps };
 }
 
 export function keepPending(s) {
@@ -88,6 +91,15 @@ export function keepPending(s) {
   s.collection.unshift(s.pending);
   s.pending = null;
   return true;
+}
+
+// Продать выпавший, но ещё не сохранённый номер сразу
+export function sellPending(s) {
+  if (!s.pending) return 0;
+  const price = s.pending.price;
+  s.balance += price;
+  s.pending = null;
+  return price;
 }
 
 export function sellFromCollection(s, id) {

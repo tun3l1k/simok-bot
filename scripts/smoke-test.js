@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { fresh } from '../webapp/js/state.js';
 import * as game from '../webapp/js/game.js';
-import { BETS, TIERS, OPERATORS, CRAFT } from '../webapp/js/config.js';
+import { CONFIG, BETS, TIERS, OPERATORS, CRAFT } from '../webapp/js/config.js';
 import { SERIES, detectSeries, roll, rollMin, digitBonus, oddsOf } from '../webapp/js/generator.js';
 
 const s = fresh();
@@ -23,12 +23,12 @@ assert.ok(game.claimDaily(s) !== null && game.claimDaily(s) === null, 'ежед�
 BETS.forEach((b, i) => {
   if (!b.tier) return;
   const t = fresh();
-  t.bet = i; t.balance = b.cost * 2;
+  t.bet = i; t.balance = b.cost * 2; t.luck = 5;
   const r2 = game.spin(t, 1);
   assert.ok(!r2.error, `ставка ${i}: хватает денег`);
   assert.ok(r2.item.tier >= b.tier, `ставка ${TIERS[b.tier].name}+ даёт номер не ниже редкости`);
   assert.equal(t.balance, b.cost, `ставка ${i}: списана цена ставки`);
-  assert.equal(t.luck, fresh().luck, 'Удача на ставке не тратится');
+  assert.equal(t.luck, 5, 'Удача на ставке не тратится');
   const poor = fresh(); poor.bet = i; poor.balance = b.cost - 1;
   assert.ok(game.spin(poor, 1).error, `ставка ${i}: без денег крутить нельзя`);
 });
@@ -100,3 +100,30 @@ assert.equal(oddsOf(null), null);
   assert.ok(!r3.error && r3.item.tier >= 2 && r3.item.op === 'yoga', 'ставка + оператор');
 }
 console.log('Все проверки пройдены');
+
+// Удача: каждые 100 круток — один заряд, заряд делает одну крутку «лучший из 2»
+{
+  const t = fresh(); t.balance = 1e9;
+  for (let i = 0; i < CONFIG.LUCK_EVERY - 1; i++) game.spin(t, 1);
+  assert.equal(t.luck, 0, 'до 100-й крутки заряда нет');
+  assert.equal(game.luckLeft(t), 1, 'осталась одна крутка до заряда');
+  const r = game.spin(t, 1);
+  assert.equal(r.luckEarned, 1, '100-я крутка даёт заряд');
+  assert.equal(t.luck, 1);
+  assert.equal(game.luckLeft(t), CONFIG.LUCK_EVERY, 'счётчик начался заново');
+  const u = game.spin(t, 1);
+  assert.equal(u.luckUsed, 1, 'заряд потрачен на следующую крутку');
+  assert.equal(t.luck, 0);
+}
+// Продажа выпавшего номера
+{
+  const t = fresh(); const b0 = t.balance;
+  const r = game.spin(t, 1); const after = t.balance;
+  if (!r.kept) {
+    assert.equal(game.sellPending(t), r.item.price, 'продали по цене номера');
+    assert.equal(t.balance, after + r.item.price);
+    assert.equal(t.pending, null);
+    assert.equal(game.sellPending(t), 0, 'второй раз продать нечего');
+  }
+}
+console.log('Удача и продажа: ок');

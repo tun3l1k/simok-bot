@@ -3,7 +3,8 @@ import { CONFIG, BETS, COUNTRIES, OPERATORS } from './config.js';
 export const fresh = () => ({
   v: 1,
   balance: CONFIG.START_BALANCE,
-  luck: CONFIG.START_LUCK,
+  luck: CONFIG.START_LUCK, // готовые заряды Удачи (каждый делает одну крутку x2)
+  luckSpins: 0,            // крутки до следующего заряда
   level: 1,
   xp: 0,
   collection: [],
@@ -28,6 +29,8 @@ export function load() {
       if (!BETS[s.bet]) s.bet = 0;
       delete s.uiScale; // раньше был выбор размера интерфейса, теперь размер один
       s.stats = { ...fresh().stats, ...s.stats };
+      if (!Number.isInteger(s.luck) || s.luck < 0) s.luck = 0;
+      if (!Number.isInteger(s.luckSpins) || s.luckSpins < 0) s.luckSpins = 0;
       if (s.operator && !OPERATORS.some((o) => o.id === s.operator)) s.operator = null;
       if (!Number.isInteger(s.digit) || s.digit < 0 || s.digit > 9) s.digit = null;
       if (!COUNTRIES.some((c) => c.id === s.country && c.ready)) s.country = 'ru';

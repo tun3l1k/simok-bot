@@ -43,7 +43,8 @@ async function onSpin() {
   const notes = [];
   if (state.multi > 1) notes.push(`Лучший из ${state.multi}. Остальные проданы за ${formatMoney(res.autoSold)}`);
   if (res.kept) notes.push('Номер сразу ушёл в коллекцию');
-  res.levelUps.forEach((l) => notes.push(`Уровень ${l.level}: +${formatMoney(l.balance)} и +${l.luck} Удачи`));
+  res.levelUps.forEach((l) => notes.push(`Уровень ${l.level}: +${formatMoney(l.balance)}`));
+  if (res.luckEarned) notes.push('🍀 Удача x2 готова: следующая крутка выберет лучший из двух');
   if (notes.length) ui.toast(notes.join('\n'));
   busy = false;
   $('spinBtn').disabled = false;
@@ -97,6 +98,15 @@ $('betList').onclick = (e) => {
 $('keepBtn').onclick = () => {
   if (game.keepPending(state)) { view = { ...view, kept: true }; haptic(); renderAll(); }
 };
+$('sellBtn').onclick = () => {
+  const item = view.item;
+  if (!item) return;
+  const price = state.pending?.id === item.id ? game.sellPending(state) : game.sellFromCollection(state, item.id);
+  if (price) { ui.toast(`Продано за ${formatMoney(price)}`); haptic(); renderAll(); }
+};
+$('luckPill').onclick = () => ui.toast(state.luck > 0
+  ? `🍀 Удача x2 готова${state.luck > 1 ? ` (${state.luck} шт.)` : ''}: следующая крутка выберет лучший из двух`
+  : `🍀 До Удачи x2 осталось ${game.luckLeft(state)} круток. Каждые ${CONFIG.LUCK_EVERY} круток = одна крутка «лучший из 2»`);
 $('shareBtn').onclick = () => {
   if (!view.item) return;
   shareText(`Мне выпал номер ${formatPhone(view.item)} за ${formatMoney(view.item.price)}`, inviteLink(CONFIG.BOT_USERNAME));
@@ -162,11 +172,13 @@ $('craftGo').onclick = () => {
   openDetail(res.item, 'Слияние');
 };
 
-$('inviteBtn').onclick = () => shareText('Крути SIM-карты и собирай красивые номера', inviteLink(CONFIG.BOT_USERNAME));
+const invite = () => shareText('Крути SIM-карты и собирай красивые номера', inviteLink(CONFIG.BOT_USERNAME));
+$('inviteBtn').onclick = invite;
+$('inviteBtn2').onclick = invite;
 
 $('dailyBtn').onclick = () => {
   const d = game.claimDaily(state);
-  if (d) { ui.toast(`Бонус: +${formatMoney(d.balance)} и +${d.luck} Удачи`); hapticDone(); renderAll(); }
+  if (d) { ui.toast(`Бонус: +${formatMoney(d.balance)}`); hapticDone(); renderAll(); }
   else ui.toast('Бонус уже получен. Загляни позже');
 };
 $('resetBtn').onclick = () => {
@@ -188,4 +200,4 @@ $('shopList').onclick = (e) => {
 
 const daily = game.claimDaily(state);
 renderAll();
-if (daily) ui.toast(`Ежедневный бонус: +${formatMoney(daily.balance)} и +${daily.luck} Удачи`);
+if (daily) ui.toast(`Ежедневный бонус: +${formatMoney(daily.balance)}`);

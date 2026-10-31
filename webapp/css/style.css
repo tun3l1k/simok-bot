@@ -49,7 +49,11 @@ main{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;marg
 .xp{display:block;width:42px;height:4px;border-radius:2px;background:#3a3348;overflow:hidden}
 .xp b{display:block;height:100%;width:0;background:var(--accent);transition:width .3s}
 .chip{font-style:normal;background:#f5c518;color:#1a1200;border-radius:9.5px;padding:2px 6.5px;font-size:11.5px}
-.luck{gap:5px;padding:0 9.5px}
+.luck{gap:5px;padding:0 9.5px;color:#fff}
+.luck .chip{background:#3a3348;color:#a59db5;transition:.3s}
+.luck.ready{box-shadow:0 0 0 1.5px #f5c518 inset}
+.luck.ready .chip{background:#f5c518;color:#1a1200;animation:glow 1.6s ease-in-out infinite}
+@keyframes glow{50%{box-shadow:0 0 10px #f5c518}}
 .clover{font-size:21px;line-height:1;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
 .bal-col{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:5.5px;flex:none}
 .balance{text-align:right}
@@ -92,7 +96,12 @@ main{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;marg
 .info{text-align:center;font-size:12.5px;line-height:1.45;color:var(--mut)}
 .info:empty,.sell-line:empty{display:none}
 .info b{color:var(--ok)}
-.actions{display:flex;justify-content:center;gap:9.5px}
+.actions{display:flex;gap:9.5px;width:100%}
+.actions .pill{flex:1;min-width:0;padding:0 8px;font-size:13.5px;overflow:hidden;text-overflow:ellipsis}
+.actions .sell-btn{flex:1.2}
+.pill.hot{background:#ffd60a;color:#1a1200;box-shadow:0 4px 16px rgba(255,214,10,.28)}
+.pill.hot:active{background:#e6bf00}
+.keep{align-self:center;padding:0 22px}
 .actions .pill[disabled]{opacity:.5}
 .sell-line{text-align:center;font-size:12.5px;color:var(--mut);margin-top:-2px}
 .controls{display:flex;gap:7.5px}
@@ -110,6 +119,33 @@ main{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;marg
 .cost{font-style:normal;background:#c9690f;color:#fff;border-radius:13.5px;padding:4px 9.5px;font-size:13.5px}
 
 .panel{gap:9.5px;padding-bottom:11.5px}
+#view-more{gap:12px}
+.luck-card{display:flex;gap:12px;align-items:center;padding:14px;border-radius:20px;background:linear-gradient(135deg,#2f2a1c,#241c33 70%);border:1px solid rgba(245,197,24,.28)}
+.lc-clover{font-size:36px;line-height:1;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
+.lc-body{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+.lc-body b{font-size:15.5px}
+.lc-body small{color:var(--mut);font-size:12px;line-height:1.35}
+.lc-bar{display:block;height:6px;border-radius:3px;background:#3a3348;overflow:hidden;margin-top:6px}
+.lc-bar u{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#f5c518,#ff8a1f);transition:width .4s}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.stat{display:flex;flex-direction:column;gap:2px;padding:12px 14px;border-radius:18px;background:var(--card);min-width:0}
+.stat span{font-size:20px;line-height:1.1;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
+.stat b{font-size:19px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:4px}
+.stat small{color:var(--mut);font-size:12px}
+.menu{display:flex;flex-direction:column;border-radius:20px;background:var(--card);overflow:hidden}
+.menu-item{display:flex;align-items:center;gap:12px;padding:12px 14px;background:transparent;text-align:left;width:100%}
+.menu-item+.menu-item{border-top:1px solid rgba(255,255,255,.06)}
+.menu-item:active{background:#2c2340}
+.mi-ic{flex:none;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
+.mi-ic.gift{background:linear-gradient(135deg,#ff8a1f,#ff4d6d)}
+.mi-ic.gear{background:linear-gradient(135deg,#6b7385,#3d4456)}
+.mi-ic.friends{background:linear-gradient(135deg,#3aa0ff,#7a5cff)}
+.mi-t{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.mi-t b{font-size:15px}
+.mi-t small{color:var(--mut);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mi-t small.ok{color:var(--ok)}
+.mi-go{font-style:normal;font-size:24px;color:var(--mut);line-height:1}
+.danger-link{align-self:center;color:#ff7a8a;opacity:.8;margin-top:2px}
 .list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7.5px}
 .item{display:flex;align-items:center;justify-content:space-between;gap:9.5px;background:var(--card2);border-left:4px solid var(--tier);border-radius:11.5px;padding:9.5px 11.5px}
 .item .num{font-weight:800;font-size:15px;font-variant-numeric:tabular-nums}
@@ -161,8 +197,15 @@ dialog.sheet h2{text-align:center;margin:0 0 7.5px;font-size:23px}
 .sim-mini::after{z-index:1;content:"";position:absolute;left:7.5px;top:8.5px;width:15px;height:11.5px;border-radius:3px;background:#e6c25a}
 .toast{position:fixed;left:50%;bottom:142.5px;transform:translate(-50%,19px);max-width:88vw;padding:9.5px 15px;border-radius:15px;background:#3a2f52;font-size:13.5px;font-weight:600;text-align:center;opacity:0;pointer-events:none;transition:.25s}
 .toast.show{opacity:1;transform:translate(-50%,0)}
+@media (max-height:760px){
+  .sell-line{display:none}
+}
 @media (max-height:700px){
-  .sim-wrap{max-width:275.5px}
+  .sim-wrap{max-width:236px}
+  .sim-number{font-size:clamp(14px,4.9vw,18px);left:15px;bottom:12px}
+  .op{font-size:18px}
+  .city{font-size:11px}
+  .info{font-size:12px;line-height:1.35}
   .nav button{height:49.5px}
   .nav svg{width:21px;height:21px}
   .info{font-size:11.5px;line-height:1.35}

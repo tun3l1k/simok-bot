@@ -15,7 +15,7 @@
     <div class="hud-left">
       <div class="hud-row">
         <div class="pill lvl"><span id="lvl">Ур. 1</span><i class="xp"><b id="xpbar"></b></i></div>
-        <div class="pill luck" aria-label="Удача"><span class="clover" aria-hidden="true">🍀</span><span id="luck">0</span><em class="chip" id="luckChip">x2</em></div>
+        <button class="pill luck" id="luckPill" aria-label="Удача"><span class="clover" aria-hidden="true">🍀</span><span id="luck">0</span><em class="chip" id="luckChip">x2</em></button>
       </div>
       <div class="seg" id="seg"><button class="on" data-go="play">SIM</button><button id="tariffsBtn">Тарифы</button></div>
     </div>
@@ -46,9 +46,10 @@
       <div class="info" id="info"></div>
 
       <div class="actions">
-        <button class="pill btn" id="keepBtn">В коллекцию</button>
-        <button class="pill btn icon" id="shareBtn" aria-label="Поделиться"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M8 7l4-4 4 4M5 12v8h14v-8"/></svg></button>
+        <button class="pill btn sell-btn" id="sellBtn">Продать</button>
+        <button class="pill btn hot" id="shareBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M8 7l4-4 4 4M5 12v8h14v-8"/></svg>Похвастаться</button>
       </div>
+      <button class="pill btn small keep" id="keepBtn">В коллекцию</button>
       <div class="sell-line" id="sellLine"></div>
       </div>
 
@@ -73,10 +74,14 @@
 
     <section id="view-more" class="panel" data-view hidden>
       <h2>Ещё</h2>
-      <p class="muted" id="statsLine"></p>
-      <button class="pill btn wide" id="dailyBtn">Ежедневный бонус</button>
-      <button class="pill btn wide" id="settingsBtn">Настройки</button>
-      <button class="pill btn wide danger" id="resetBtn">Сбросить прогресс</button>
+      <div class="luck-card" id="luckCard"></div>
+      <div class="stats" id="statsGrid"></div>
+      <div class="menu">
+        <button class="menu-item" id="dailyBtn"><span class="mi-ic gift" aria-hidden="true">🎁</span><span class="mi-t"><b>Ежедневный бонус</b><small id="dailySub"></small></span><i class="mi-go" aria-hidden="true">›</i></button>
+        <button class="menu-item" id="settingsBtn"><span class="mi-ic gear" aria-hidden="true">⚙️</span><span class="mi-t"><b>Настройки</b><small id="settingsSub"></small></span><i class="mi-go" aria-hidden="true">›</i></button>
+        <button class="menu-item" id="inviteBtn2"><span class="mi-ic friends" aria-hidden="true">👥</span><span class="mi-t"><b>Пригласить друга</b><small>Отправь ссылку на игру</small></span><i class="mi-go" aria-hidden="true">›</i></button>
+      </div>
+      <button class="link danger-link" id="resetBtn">Сбросить прогресс</button>
     </section>
   </main>
 

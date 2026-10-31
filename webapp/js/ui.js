@@ -1,7 +1,7 @@
 import { skinOf } from './skins.js';
 import { CONFIG, TIERS, OPERATORS, AUTO_KEEP, BETS, COUNTRIES, SHOP_ITEMS, DIGIT_BONUS, xpForLevel } from './config.js';
 import { formatPhone, formatMoney, formatMult } from './generator.js';
-import { collectionValue, currentBet, spinCost, operatorOf, luckBestOf, craftQuote } from './game.js';
+import { collectionValue, currentBet, spinCost, operatorOf, luckBestOf, luckLeft, craftQuote } from './game.js';
 
 export const countryOf = (s) => COUNTRIES.find((c) => c.id === s.country) ?? COUNTRIES[0];
 
@@ -10,8 +10,10 @@ export const $ = (id) => document.getElementById(id);
 export function renderHud(s) {
   $('lvl').textContent = `Ур. ${s.level}`;
   $('xpbar').style.width = `${Math.min(100, (s.xp / xpForLevel(s.level)) * 100)}%`;
-  $('luck').textContent = s.luck;
-  $('luckChip').textContent = `x${luckBestOf(s)}`;
+  // Клевер: сколько круток до Удачи x2; когда заряд готов, плашка загорается
+  $('luck').textContent = luckLeft(s);
+  $('luckChip').textContent = `x${luckBestOf(s)}${s.luck > 1 ? `·${s.luck}` : ''}`;
+  $('luckPill').classList.toggle('ready', s.luck > 0);
   $('balance').textContent = formatMoney(s.balance);
 }
 
@@ -98,10 +100,14 @@ export function renderPlay(s, view) {
     + (item ? '<button class="link" id="detailLink">Разбор номера ›</button>' : '');
 
   const canKeep = !!s.pending && s.pending.id === item?.id;
+  const inColl = !!item && s.collection.some((x) => x.id === item.id);
+  const sold = !!item && !canKeep && !inColl;
+  $('sellBtn').disabled = !(canKeep || inColl);
+  $('sellBtn').textContent = sold ? `Продано за ${formatMoney(item.price)}` : item ? `Продать за ${formatMoney(item.price)}` : 'Продать';
   $('keepBtn').disabled = !canKeep;
-  $('keepBtn').textContent = kept ? 'Сохранено' : 'В коллекцию';
+  $('keepBtn').textContent = inColl ? 'В коллекции' : 'В коллекцию';
   $('shareBtn').disabled = !item;
-  $('sellLine').textContent = canKeep ? `Этот номер продастся за ${formatMoney(item.price)}` : kept ? 'Номер в коллекции' : '';
+  $('sellLine').textContent = canKeep ? 'Не сохранишь, продастся сам при следующей крутке' : '';
   $('spinLabel').textContent = item ? 'Крутить ещё' : 'Крутить';
 }
 
@@ -123,7 +129,26 @@ export function renderCollection(s) {
 }
 
 export function renderMore(s) {
-  $('statsLine').textContent = `Круток: ${s.stats.spins} · Номеров в коллекции: ${s.collection.length}`;
+  const left = luckLeft(s);
+  const pct = ((CONFIG.LUCK_EVERY - left) / CONFIG.LUCK_EVERY) * 100;
+  $('luckCard').innerHTML = `
+    <span class="lc-clover" aria-hidden="true">🍀</span>
+    <div class="lc-body">
+      <b>${s.luck > 0 ? `Удача x${luckBestOf(s)} готова${s.luck > 1 ? ` · ${s.luck} шт.` : ''}` : `До Удачи x${luckBestOf(s)}: ${left}`}</b>
+      <small>Каждые ${CONFIG.LUCK_EVERY} круток копится заряд. Он делает одну крутку «лучший из ${luckBestOf(s)}»</small>
+      <i class="lc-bar"><u style="width:${pct}%"></u></i>
+    </div>`;
+  const stat = (icon, val, label) => `<div class="stat"><span aria-hidden="true">${icon}</span><b>${val}</b><small>${label}</small></div>`;
+  $('statsGrid').innerHTML =
+    stat('🎰', s.stats.spins.toLocaleString('ru-RU'), 'круток') +
+    stat('📱', s.collection.length.toLocaleString('ru-RU'), 'в коллекции') +
+    stat('💰', formatMoney(collectionValue(s)), 'цена коллекции') +
+    stat('🔥', s.stats.crafts.toLocaleString('ru-RU'), 'слияний');
+  const d = CONFIG.DAILY_BONUS;
+  const wait = s.lastDaily + d.cooldownH * 3600e3 - Date.now();
+  $('dailySub').textContent = wait > 0 ? `Через ${Math.ceil(wait / 3600e3)} ч` : `Забери ${formatMoney(d.balance)}`;
+  $('dailySub').classList.toggle('ok', wait <= 0);
+  $('settingsSub').textContent = `Автосохранение: ${AUTO_KEEP[s.autoKeep].label}${s.digit !== null ? ` · цифра ${s.digit}` : ''}`;
   $('autoBtn').textContent = `Автосохранение: ${AUTO_KEEP[s.autoKeep].label}`;
   renderDigits(s);
 }

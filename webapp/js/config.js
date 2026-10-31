@@ -6,19 +6,20 @@ export const CONFIG = {
   BOT_USERNAME: 'SimOkBot', // имя бота без @
   SPIN_COST: 500,
   START_BALANCE: 10000,
-  START_LUCK: 10,
-  LUCK_BEST_OF: 2,            // при Удаче крутится N номеров, берётся лучший
+  START_LUCK: 0,
+  LUCK_EVERY: 100,            // каждые N круток копится заряд Удачи
+  LUCK_BEST_OF: 2,            // заряд делает одну крутку «лучший из N номеров»
   MULTI_OPTIONS: [1, 5, 10],
   BASE_MIN: 70,
   BASE_MAX: 210,
   PATTERN_BOOST: 0.04,        // шанс, что номер сгенерируется «красивым» намеренно
   XP_PER_SPIN: 10,
   BAILOUT: 2000,              // пособие, если денег нет и продавать нечего
-  DAILY_BONUS: { balance: 2000, luck: 3, cooldownH: 20 },
+  DAILY_BONUS: { balance: 2000, cooldownH: 20 },
 };
 
 export const xpForLevel = (lvl) => 100 + 60 * (lvl - 1);
-export const levelReward = (lvl) => ({ balance: 1000 * lvl, luck: 3 });
+export const levelReward = (lvl) => ({ balance: 1000 * lvl });
 
 // Редкость определяется ценой номера
 export const TIERS = [
