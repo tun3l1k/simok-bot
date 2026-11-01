@@ -1,37 +1,37 @@
-// Внешний вид SIM каждого оператора: по духу как реальные карточки, но свои названия и знаки.
+// Внешний вид SIM каждого оператора. Всё нарисовано с нуля: свои знаки и свои фоны, без чужих логотипов.
 // bg — фон, ink — цвет текста, art — декор (SVG в рамке 300×180), logo — знак рядом с названием.
-const rect = (x, y, w, h, rx, f, extra = '') => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${f}" ${extra}/>`;
+const rect = (x, y, w, h, rx, f) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${f}"/>`;
 
 export const SKINS = {
-  // красная карта, белый скруглённый знак (как у крупного красного оператора)
+  // МГС: красная карта, кольца и шестиугольный знак с буквой «М»
   mgs: {
-    bg: 'linear-gradient(135deg,#ff2a36,#e30613 60%,#b9000d)', ink: '#fff',
-    art: `<circle cx="285" cy="20" r="95" fill="#fff" opacity=".08"/><circle cx="20" cy="190" r="80" fill="#000" opacity=".08"/>`,
-    logo: `<svg viewBox="0 0 30 30" width="26" height="26" aria-hidden="true">${rect(0, 0, 30, 30, 9, '#fff')}<ellipse cx="15" cy="16" rx="8" ry="6.5" fill="#e30613"/><rect x="9" y="9" width="12" height="6" rx="3" fill="#e30613"/></svg>`,
+    bg: 'linear-gradient(135deg,#ff3a45,#e0101f 60%,#a8000f)', ink: '#fff',
+    art: `<g fill="none" stroke="#fff" opacity=".16" stroke-width="2"><circle cx="262" cy="30" r="46"/><circle cx="262" cy="30" r="72"/><circle cx="262" cy="30" r="98"/></g><path d="M0 130L120 180H0z" fill="#000" opacity=".12"/>`,
+    logo: `<svg viewBox="0 0 30 30" width="26" height="26" aria-hidden="true"><path d="M15 1.5l11.7 6.75v13.5L15 28.5 3.3 21.75V8.25z" fill="#fff"/><path d="M9 21V10l6 6 6-6v11" stroke="#e0101f" stroke-width="2.6" fill="none" stroke-linejoin="round" stroke-linecap="round"/></svg>`,
   },
-  // тёмная карта с неоновым голубым акцентом
+  // Йога: тёмная карта с бирюзовым свечением и лотосом
   yoga: {
-    bg: 'linear-gradient(135deg,#1b2432,#0b111b 70%)', ink: '#fff',
-    art: `<path d="M0 176Q100 160 200 174T300 164V180H0z" fill="#00aff0"/><path d="M300 52Q250 60 215 100" stroke="#2ee6ff" stroke-width="5" fill="none" stroke-linecap="round" opacity=".8"/><path d="M300 68Q262 76 236 106" stroke="#00aff0" stroke-width="5" fill="none" stroke-linecap="round" opacity=".9"/>`,
-    logo: `<svg viewBox="0 0 30 30" width="26" height="26" aria-hidden="true"><circle cx="15" cy="15" r="14" fill="none" stroke="#00c3ff" stroke-width="3"/><path d="M9 11l6 6 6-6M15 17v7" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    bg: 'linear-gradient(135deg,#17303b,#0a141c 70%)', ink: '#fff',
+    art: `<circle cx="258" cy="104" r="64" fill="#19d3c5" opacity=".13"/><g transform="translate(258 116)" fill="#19d3c5"><ellipse cx="0" cy="-26" rx="11" ry="26" opacity=".9"/><ellipse cx="0" cy="-26" rx="11" ry="26" transform="rotate(-42)" opacity=".7"/><ellipse cx="0" cy="-26" rx="11" ry="26" transform="rotate(42)" opacity=".7"/><ellipse cx="0" cy="-22" rx="9" ry="22" transform="rotate(-80)" opacity=".5"/><ellipse cx="0" cy="-22" rx="9" ry="22" transform="rotate(80)" opacity=".5"/></g>`,
+    logo: `<svg viewBox="0 0 30 30" width="26" height="26" aria-hidden="true"><circle cx="15" cy="15" r="14" fill="#19d3c5"/><g fill="#0a141c"><ellipse cx="15" cy="12" rx="3.2" ry="7"/><ellipse cx="15" cy="12" rx="3.2" ry="7" transform="rotate(-50 15 20)"/><ellipse cx="15" cy="12" rx="3.2" ry="7" transform="rotate(50 15 20)"/></g></svg>`,
   },
-  // зелёная карта с фиолетовой лентой, знак-лисья мордочка
+  // MegaFox: зелёная карта с оранжевым лисьим хвостом
   megafox: {
-    bg: 'linear-gradient(135deg,#3fd66a,#00b956 55%,#00873f)', ink: '#fff',
-    art: `<path d="M300 0v110Q230 60 190 0z" fill="#6a2fd1" opacity=".92"/><path d="M300 40v70Q270 80 250 40z" fill="#9a63ff" opacity=".7"/>`,
+    bg: 'linear-gradient(135deg,#43d96e,#00b45a 55%,#007f3b)', ink: '#fff',
+    art: `<path d="M300 180V40Q250 60 215 120Q200 150 170 180z" fill="#ff8a1f" opacity=".95"/><path d="M300 180V90Q270 110 250 140Q240 160 225 180z" fill="#ffd9a8"/>`,
     logo: `<svg viewBox="0 0 30 30" width="26" height="26" aria-hidden="true"><path d="M3 3l8 5h8l8-5-2 12c0 7-5 12-10 12S5 22 5 15z" fill="#fff"/><circle cx="11" cy="15" r="1.7" fill="#00a74f"/><circle cx="19" cy="15" r="1.7" fill="#00a74f"/><path d="M13 21h4l-2 2z" fill="#00a74f"/></svg>`,
   },
-  // жёлтая карта с чёрными диагональными полосами
+  // Билайт: жёлтая карта с чёрным углом и точечной сеткой
   bilait: {
-    bg: 'linear-gradient(135deg,#ffd91a,#ffcc00)', ink: '#111',
-    art: `<clipPath id="bc"><rect x="120" y="40" width="180" height="84"/></clipPath><g clip-path="url(#bc)"><g transform="rotate(-24 210 82)" fill="#111"><rect x="60" y="52" width="300" height="12"/><rect x="60" y="76" width="300" height="12"/><rect x="60" y="100" width="300" height="12"/></g></g>`,
-    logo: `<svg viewBox="0 0 30 30" width="26" height="26" aria-hidden="true"><circle cx="15" cy="15" r="14" fill="#111"/><g fill="#ffcc00"><rect x="5" y="9" width="20" height="3.2" rx="1.6"/><rect x="5" y="14" width="20" height="3.2" rx="1.6"/><rect x="5" y="19" width="20" height="3.2" rx="1.6"/></g></svg>`,
+    bg: 'linear-gradient(135deg,#ffe02e,#ffcc00)', ink: '#111',
+    art: `<path d="M300 46V146L232 96z" fill="#111"/><g fill="#111" opacity=".25">${[0, 1, 2, 3].map((r) => [0, 1, 2, 3, 4, 5].map((c) => `<circle cx="${150 + c * 12}" cy="${58 + r * 12}" r="2"/>`).join('')).join('')}</g>`,
+    logo: `<svg viewBox="0 0 30 30" width="26" height="26" aria-hidden="true"><circle cx="15" cy="15" r="14" fill="#111"/><circle cx="15" cy="15" r="5.5" fill="#ffcc00"/><g stroke="#ffcc00" stroke-width="2" stroke-linecap="round"><path d="M15 4v3M15 23v3M4 15h3M23 15h3M7.2 7.2l2.1 2.1M20.7 20.7l2.1 2.1M7.2 22.8l2.1-2.1M20.7 9.3l2.1-2.1"/></g></svg>`,
   },
-  // чёрная карта с белой надписью и яркой точкой
+  // Теле3: чёрная карта с розовым кругом
   tele3: {
     bg: 'linear-gradient(135deg,#2a2a2e,#0d0d0f 70%)', ink: '#fff',
     art: `<circle cx="252" cy="92" r="28" fill="#ff2d87"/><circle cx="252" cy="92" r="44" fill="none" stroke="#ff2d87" stroke-width="2" opacity=".5"/>`,
-    logo: `<svg viewBox="0 0 30 30" width="26" height="26" aria-hidden="true"><rect width="30" height="30" rx="8" fill="#fff"/><text x="15" y="21.5" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="17" fill="#0d0d0f">3</text></svg>`,
+    logo: `<svg viewBox="0 0 30 30" width="26" height="26" aria-hidden="true">${rect(0, 0, 30, 30, 8, '#fff')}<text x="15" y="21.5" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="17" fill="#0d0d0f">3</text></svg>`,
   },
   // «любой оператор»
   any: {

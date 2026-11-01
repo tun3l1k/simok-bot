@@ -1,7 +1,7 @@
-import { skinOf } from './skins.js?v=mvycnlow';
-import { CONFIG, CRAFT, TIERS, OPERATORS, AUTO_SELL, BETS, COUNTRIES, SHOP_ITEMS, DIGIT_BONUS, xpForLevel } from './config.js?v=mvycnlow';
-import { formatPhone, formatMoney, formatMult } from './generator.js?v=mvycnlow';
-import { collectionValue, currentBet, spinCost, operatorOf, luckBestOf, luckLeft, luck20Left, albumSize, albumFound, craftQuote } from './game.js?v=mvycnlow';
+import { skinOf } from './skins.js?v=mvyd36jy';
+import { CONFIG, CRAFT, TIERS, OPERATORS, AUTO_SELL, BETS, COUNTRIES, SHOP_ITEMS, DIGIT_BONUS, xpForLevel } from './config.js?v=mvyd36jy';
+import { formatPhone, formatMoney, formatMult } from './generator.js?v=mvyd36jy';
+import { collectionValue, currentBet, spinCost, operatorOf, luckBestOf, luckLeft, luck20Left, albumSize, albumFound, craftQuote } from './game.js?v=mvyd36jy';
 
 export const countryOf = (s) => COUNTRIES.find((c) => c.id === s.country) ?? COUNTRIES[0];
 

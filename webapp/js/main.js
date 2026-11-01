@@ -1,10 +1,10 @@
-import { CONFIG, CRAFT, AUTO_SELL, BETS, COUNTRIES, OPERATORS, SHOP_ITEMS, TIERS } from './config.js?v=mvycnlow';
-import { formatPhone, formatMoney, formatMult } from './generator.js?v=mvycnlow';
-import { load, save, fresh } from './state.js?v=mvycnlow';
-import * as game from './game.js?v=mvycnlow';
-import * as ui from './ui.js?v=mvycnlow';
-import { $ } from './ui.js?v=mvycnlow';
-import { initTelegram, haptic, hapticDone, shareText, inviteLink } from './telegram.js?v=mvycnlow';
+import { CONFIG, CRAFT, AUTO_SELL, BETS, COUNTRIES, OPERATORS, SHOP_ITEMS, TIERS } from './config.js?v=mvyd36jy';
+import { formatPhone, formatMoney, formatMult } from './generator.js?v=mvyd36jy';
+import { load, save, fresh } from './state.js?v=mvyd36jy';
+import * as game from './game.js?v=mvyd36jy';
+import * as ui from './ui.js?v=mvyd36jy';
+import { $ } from './ui.js?v=mvyd36jy';
+import { initTelegram, haptic, hapticDone, shareText, inviteLink } from './telegram.js?v=mvyd36jy';
 
 initTelegram();
 let state = load();

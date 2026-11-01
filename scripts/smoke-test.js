@@ -46,8 +46,12 @@ OPERATORS.forEach((o) => {
   for (let i = 0; i < 200; i++) assert.ok(own.has(rollMin(2, { op: o.id }).code), `ставка: код ${o.id}`);
 });
 {
-  const all = new Set(OPERATORS.flatMap((o) => o.codes.map((c) => c.code)));
-  assert.equal(all.size, OPERATORS.reduce((n, o) => n + o.codes.length, 0), 'коды у операторов не повторяются');
+  // один код может покрывать несколько городов своего макрорегиона, но у двух операторов общих кодов быть не должно
+  const owner = {};
+  for (const o of OPERATORS) for (const c of o.codes) {
+    assert.ok(!owner[c.code] || owner[c.code] === o.id, `код ${c.code} принадлежит двум операторам`);
+    owner[c.code] = o.id;
+  }
   const seen = new Set();
   for (let i = 0; i < 6000; i++) seen.add(roll().op);
   assert.equal(seen.size, OPERATORS.length, 'без выбора выпадают все операторы');
