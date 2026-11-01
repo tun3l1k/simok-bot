@@ -67,31 +67,45 @@ for (let i = 0; i < 500; i++) {
 assert.equal(oddsOf({ name: 'Пара-пара' }) > 10, true, '«1 из N» считается для серии');
 assert.equal(oddsOf(null), null);
 
-// слияние: 3 номера одной редкости → номер редкостью выше
+// слияние: 10 номеров одной редкости → номер редкостью выше
 {
+  const N = CRAFT.COUNT;
   const t = fresh(); t.balance = 1e6;
   const mk = (tier) => { let it; do { it = roll(); } while (it.tier !== tier); return it; };
-  const trio = [mk(1), mk(1), mk(1)];
-  t.collection = [...trio, mk(0)];
-  const ids = trio.map((x) => x.id);
-  const q = game.craftQuote(trio);
-  assert.equal(q.targetTier, 2, 'цель — следующая редкость');
+  const many = (tier, n = N) => Array.from({ length: n }, () => mk(tier));
+  const group = many(1);
+  t.collection = [...group, mk(0)];
+  const ids = group.map((x) => x.id);
+  const q = game.craftQuote(group);
+  assert.ok(q.targetTier >= 2, 'цель — не ниже следующей редкости');
   assert.ok(q.fee >= 0 && q.fee % CRAFT.ROUND === 0, 'доплата кратна шагу');
+  assert.ok(q.fee === 0 || q.targetTier === 2, 'доплата только когда цель — ближайшая редкость');
+  assert.ok(q.upChance >= 0 && q.upChance < 1, 'шанс на редкость выше от 0 до 1');
   const before = t.balance;
   const r = game.craft(t, ids);
   assert.ok(!r.error, 'слияние прошло');
-  assert.ok(r.item.tier >= 2, 'результат не ниже редкости выше');
-  assert.equal(t.collection.length, 2, '3 номера ушли, 1 пришёл');
+  assert.ok(r.item.tier >= q.targetTier, 'результат не ниже обещанной редкости');
+  assert.equal(t.collection.length, 2, `${N} номеров ушли, 1 пришёл`);
   assert.equal(t.balance, before - q.fee, 'списана доплата');
   assert.equal(t.stats.crafts, 1);
+  // много денег в сумме поднимают цель выше
+  const rich = Array.from({ length: N }, () => ({ ...mk(1), price: 3000 }));
+  { const rq = game.craftQuote(rich); assert.ok(rq.targetTier >= 3 || rq.upTier >= 3, 'дорогие номера дают шанс на редкость выше следующей'); }
   // ошибки
-  assert.ok(game.craft(t, [t.collection[0].id, t.collection[0].id, t.collection[1].id]).error, 'одинаковые номера нельзя');
-  assert.ok(game.craftQuote([mk(1), mk(2), mk(1)]).error, 'разные редкости нельзя');
-  assert.ok(game.craftQuote([mk(4), mk(4), mk(4)]).error, 'выше легендарного слиять нельзя');
-  assert.ok(game.craftQuote([mk(1)]).error, 'нужно три номера');
-  const poor = fresh(); poor.balance = 0; poor.collection = [mk(1), mk(1), mk(1)];
+  const dup = [...ids]; dup[1] = dup[0];
+  assert.ok(game.craft(t, dup).error, 'одинаковые номера нельзя');
+  assert.ok(game.craftQuote([...many(1, N - 1), mk(2)]).error, 'разные редкости нельзя');
+  assert.ok(game.craftQuote(many(4)).error, 'выше легендарного слить нельзя');
+  assert.ok(game.craftQuote([mk(1)]).error, `нужно ${N} номеров`);
+  const poor = fresh(); poor.balance = 0; poor.collection = many(0);
   const pq = game.craftQuote(poor.collection);
   if (pq.fee > 0) assert.ok(game.craft(poor, poor.collection.map((x) => x.id)).error, 'без денег на доплату нельзя');
+  // автовыбор берёт самые дешёвые из первой редкости, где хватает номеров
+  const auto = fresh(); auto.collection = [...many(0, N + 2), ...many(1, 3)];
+  const pick = game.craftAutoPick(auto);
+  assert.equal(pick.length, N);
+  const left = auto.collection.filter((x) => !pick.includes(x.id) && x.tier === 0).map((x) => x.price);
+  assert.ok(Math.max(...pick.map((id) => auto.collection.find((x) => x.id === id).price)) <= Math.min(...left), 'взяты самые дешёвые');
 }
 
 // ставка и операторы вместе
@@ -153,3 +167,34 @@ console.log('Удача и продажа: ок');
   assert.ok(u.collection.some((x) => x.id === had) || a.soldNow, 'непроданный номер ушёл в коллекцию');
 }
 console.log('Коллекция 50 и автопродажа: ок');
+
+// Удача x20: каждые 500 круток, тратится первой
+{
+  const t = fresh(); t.balance = 1e9;
+  for (let i = 0; i < CONFIG.LUCK20_EVERY - 1; i++) game.spin(t, 1);
+  assert.equal(t.luck20, 0); assert.equal(game.luck20Left(t), 1);
+  const r = game.spin(t, 1);
+  assert.equal(r.luck20Earned, 1, '500-я крутка даёт большой заряд');
+  assert.equal(t.luck20, 1);
+  const u = game.spin(t, 1);
+  assert.equal(u.item.lucky, CONFIG.LUCK20_BEST_OF, 'первым тратится большой заряд');
+  assert.equal(t.luck20, 0);
+}
+// Альбом городов: первый город даёт отметку, полный набор — награду
+{
+  const t = fresh(); t.balance = 1e9;
+  const op = OPERATORS[0];
+  const size = game.albumSize(op.id);
+  assert.ok(size > 7, 'у оператора много городов');
+  t.operator = op.id;
+  let seen = 0, bonusGot = 0;
+  for (let i = 0; i < 20000 && !bonusGot; i++) {
+    const before = t.balance;
+    const r = game.spin(t, 1);
+    if (r.found) { seen++; if (r.found.done) bonusGot = r.found.bonus; }
+  }
+  assert.equal(game.albumFound(t, op.id), size, 'все города оператора открыты');
+  assert.equal(seen, size);
+  assert.equal(bonusGot, CONFIG.ALBUM_BONUS, 'награда за полный альбом');
+}
+console.log('Удача x20 и альбом: ок');

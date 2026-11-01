@@ -66,16 +66,17 @@ let hits = 0; for (let i = 0; i < N; i++) if (digitBonus(roll().body, 7)) hits++
 console.log(`Любимая цифра 7: бонус у 1 из ${Math.round(N / hits)} номеров, средняя цена ${dBase.toFixed(0)} ₽ (${((dBase / base - 1) * 100).toFixed(1)}% к базе)`);
 
 // Слияние: ценность на выходе (номер минус доплата) должна быть ≈ суммы входящих минус комиссия
-console.log(`Слияние (комиссия ${CRAFT.FEE * 100}%): итог = номер − доплата, сравниваем с суммой трёх номеров`);
+console.log(`Слияние (комиссия ${CRAFT.FEE * 100}%): итог = номер − доплата, сравниваем с суммой ${CRAFT.COUNT} номеров`);
 for (let t = 0; t < 4; t++) {
   const pool = [];
   while (pool.length < 3000) { const it = roll(); if (it.tier === t) pool.push(it); }
   let sumIn = 0, sumOut = 0, fees = 0, K = 4000;
   for (let i = 0; i < K; i++) {
-    const trio = [0, 1, 2].map(() => pool[Math.floor(Math.random() * pool.length)]);
+    const trio = Array.from({ length: CRAFT.COUNT }, () => pool[Math.floor(Math.random() * pool.length)]);
     const q = craftQuote(trio);
-    const out = rollMin(q.targetTier);
+    const out = rollMin(q.upTier !== null && Math.random() < q.upChance ? q.upTier : q.targetTier);
     sumIn += q.sum; sumOut += out.price - q.fee; fees += q.fee;
   }
-  console.log(`  ${TIERS[t].name.padEnd(12)} → ${TIERS[t + 1].name.padEnd(12)} вход ${(sumIn / K).toFixed(0).padStart(6)} ₽, доплата ${(fees / K).toFixed(0).padStart(6)} ₽, выход ${(sumOut / K).toFixed(0).padStart(6)} ₽ (${((sumOut / sumIn) * 100).toFixed(0)}% от входа)`);
+  const q0 = craftQuote(Array.from({ length: CRAFT.COUNT }, () => pool[0]));
+  console.log(`  ${TIERS[t].name.padEnd(12)} → ${TIERS[t + 1].name.padEnd(12)}+ вход ${(sumIn / K).toFixed(0).padStart(6)} ₽, доплата ${(fees / K).toFixed(0).padStart(6)} ₽, выход ${(sumOut / K).toFixed(0).padStart(6)} ₽ (${((sumOut / sumIn) * 100).toFixed(0)}% от входа)`);
 }

@@ -1,5 +1,5 @@
-import { CONFIG, AUTO_SELL, BETS, OPERATORS, CRAFT, xpForLevel, levelReward } from './config.js?v=mvx1y7yd';
-import { roll, rollMin } from './generator.js?v=mvx1y7yd';
+import { CONFIG, AUTO_SELL, BETS, OPERATORS, CRAFT, xpForLevel, levelReward } from './config.js?v=mvycnlow';
+import { roll, rollMin } from './generator.js?v=mvycnlow';
 
 export const currentBet = (s) => BETS[s.bet] ?? BETS[0];
 export const spinCost = (s, count = s.multi) => currentBet(s).cost * count;
@@ -8,6 +8,19 @@ export const operatorOf = (s) => OPERATORS.find((o) => o.id === s.operator) ?? n
 export const luckBestOf = () => CONFIG.LUCK_BEST_OF;
 // Сколько круток осталось до следующего заряда Удачи
 export const luckLeft = (s) => CONFIG.LUCK_EVERY - (s.luckSpins % CONFIG.LUCK_EVERY);
+export const luck20Left = (s) => CONFIG.LUCK20_EVERY - (s.luck20Spins % CONFIG.LUCK20_EVERY);
+
+// Альбом городов: у каждого оператора свой набор, за полный набор есть награда
+export const albumSize = (opId) => new Set(OPERATORS.find((o) => o.id === opId).codes.map((c) => c.city)).size;
+export const albumFound = (s, opId) => (s.found?.[opId] ?? []).length;
+function discover(s, item) {
+  const list = (s.found[item.op] ??= []);
+  if (list.includes(item.city)) return null;
+  list.push(item.city);
+  const done = list.length === albumSize(item.op);
+  if (done) s.balance += CONFIG.ALBUM_BONUS;
+  return { city: item.city, op: item.op, done, bonus: done ? CONFIG.ALBUM_BONUS : 0 };
+}
 // Параметры генерации номера из настроек игрока: оператор тарифа и любимая цифра
 export const rollOpts = (s) => ({ op: s.operator ?? undefined, digit: s.digit ?? undefined });
 
@@ -49,14 +62,17 @@ function rollOne(s) {
 }
 
 function rollWithLuck(s) {
-  if (s.luck <= 0) return roll(rollOpts(s));
-  s.luck--;
+  // сначала тратится большой заряд (лучший из 20), потом обычный (лучший из 2)
+  let n = 1;
+  if (s.luck20 > 0) { s.luck20--; n = CONFIG.LUCK20_BEST_OF; }
+  else if (s.luck > 0) { s.luck--; n = luckBestOf(s); }
+  if (n === 1) return roll(rollOpts(s));
   let best = null;
-  for (let i = 0; i < luckBestOf(s); i++) {
+  for (let i = 0; i < n; i++) {
     const it = roll(rollOpts(s));
     if (!best || it.price > best.price) best = it;
   }
-  best.lucky = true;
+  best.lucky = n;
   return best;
 }
 
@@ -90,6 +106,10 @@ export function spin(s, count) {
   s.luckSpins += count;
   let luckEarned = 0;
   while (s.luckSpins >= CONFIG.LUCK_EVERY) { s.luckSpins -= CONFIG.LUCK_EVERY; s.luck++; luckEarned++; }
+  s.luck20Spins += count;
+  let luck20Earned = 0;
+  while (s.luck20Spins >= CONFIG.LUCK20_EVERY) { s.luck20Spins -= CONFIG.LUCK20_EVERY; s.luck20++; luck20Earned++; }
+  const found = discover(s, best);
   s.xp += CONFIG.XP_PER_SPIN * count;
   const levelUps = [];
   while (s.xp >= xpForLevel(s.level)) {
@@ -99,7 +119,7 @@ export function spin(s, count) {
     s.balance += r.balance;
     levelUps.push({ level: s.level, ...r });
   }
-  return { item: best, soldNow, autoSold, moved, overflow, luckUsed, luckEarned, levelUps };
+  return { item: best, soldNow, autoSold, moved, overflow, luckUsed, luckEarned, luck20Earned, found, levelUps };
 }
 
 // Продать только что выпавший номер сразу
@@ -119,17 +139,25 @@ export function sellFromCollection(s, id) {
   return it.price;
 }
 
-// ---------- Слияние: 3 номера одной редкости → 1 номер редкостью выше ----------
-// Итоговая ценность = сумма номеров минус комиссия: если средняя цена нужного класса выше, игрок доплачивает.
+// ---------- Слияние: 10 номеров одной редкости → 1 номер редкостью выше ----------
+// Ценность на выходе почти равна сумме номеров минус комиссия. Гарантируется самая высокая редкость, чья средняя цена
+// не больше суммы (но не ниже следующей), а разницу до редкости ещё выше выдаёт шанс. Если сумма не дотягивает даже
+// до следующей редкости, игрок доплачивает разницу.
 export function craftQuote(items) {
-  if (items.length !== CRAFT.COUNT) return { error: `Нужно ${CRAFT.COUNT} номера` };
+  if (items.length !== CRAFT.COUNT) return { error: `Нужно ${CRAFT.COUNT} номеров` };
   const tier = items[0].tier;
   if (items.some((x) => x.tier !== tier)) return { error: 'Номера должны быть одной редкости' };
-  const target = BETS[tier + 1];
-  if (!target) return { error: 'Выше этой редкости слиять нельзя' };
+  if (!BETS[tier + 1]) return { error: 'Выше этой редкости слить нельзя' };
   const sum = items.reduce((a, x) => a + x.price, 0);
-  const fee = Math.max(0, Math.ceil((target.avg - sum * (1 - CRAFT.FEE)) / CRAFT.ROUND) * CRAFT.ROUND);
-  return { tier, targetTier: tier + 1, target, sum, fee };
+  const net = sum * (1 - CRAFT.FEE);
+  let targetTier = tier + 1;
+  for (let t = tier + 2; t < BETS.length; t++) if (BETS[t].avg <= net) targetTier = t;
+  const target = BETS[targetTier];
+  const fee = Math.max(0, Math.ceil((target.avg - net) / CRAFT.ROUND) * CRAFT.ROUND);
+  const up = BETS[targetTier + 1];
+  const upChance = up && net > target.avg ? Math.min(0.95, (net - target.avg) / (up.avg - target.avg)) : 0;
+  const lossy = !up && net > target.avg * 1.1;
+  return { tier, targetTier, target, lossy, upTier: upChance ? targetTier + 1 : null, upChance, sum, fee };
 }
 
 export function craft(s, ids) {
@@ -141,8 +169,18 @@ export function craft(s, ids) {
   if (s.balance < q.fee) return { error: `Не хватает ${q.fee - s.balance} ₽ на доплату` };
   s.balance -= q.fee;
   s.collection = s.collection.filter((x) => !ids.includes(x.id));
-  const item = rollMin(q.targetTier, rollOpts(s));
+  const upgraded = q.upTier !== null && Math.random() < q.upChance;
+  const item = rollMin(upgraded ? q.upTier : q.targetTier, rollOpts(s));
   s.collection.unshift(item);
   s.stats.crafts++;
-  return { item, ...q };
+  return { item, upgraded, found: discover(s, item), ...q };
+}
+
+// Самые дешёвые CRAFT.COUNT номеров из самой низкой редкости, где их хватает
+export function craftAutoPick(s) {
+  for (let t = 0; t < BETS.length - 1; t++) {
+    const pool = s.collection.filter((x) => x.tier === t).sort((a, b) => a.price - b.price);
+    if (pool.length >= CRAFT.COUNT) return pool.slice(0, CRAFT.COUNT).map((x) => x.id);
+  }
+  return [];
 }

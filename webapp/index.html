@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache">
 <meta name="theme-color" content="#140f1f">
 <title>SimOk</title>
-<link rel="stylesheet" href="css/style.css?v=mvx1y7yd">
+<link rel="stylesheet" href="css/style.css?v=mvycnlow">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
@@ -114,9 +114,9 @@
   <div class="grab"></div>
   <h2>Настройки</h2>
   <div class="setting">
-    <div class="setting-head"><span>Любимая цифра</span><small id="digitHint"></small></div>
+    <div class="setting-head"><span class="sh-title">Любимая цифра<button class="info-btn" id="digitInfo" aria-label="Что это такое" aria-expanded="false">!</button></span><small id="digitHint"></small></div>
     <div class="digits" id="digitList" role="group" aria-label="Любимая цифра"></div>
-    <p class="muted small left" id="digitNote"></p>
+    <div class="note" id="digitNote" hidden></div>
   </div>
   <button class="pill btn wide" id="autoBtn">Автопродажа: Выкл</button>
   <p class="muted small left">Автопродажа сразу продаёт номера выбранной редкости и ниже. Остальные уходят в коллекцию, когда крутишь дальше (до 50 номеров, при переполнении продаётся самый дешёвый).</p>
@@ -135,10 +135,19 @@
 <dialog id="craftSheet" class="sheet">
   <div class="grab"></div>
   <h2>Слияние</h2>
-  <p class="muted center">Выбери 3 номера одной редкости и получи 1 номер редкостью выше. Ценность почти равна сумме трёх номеров (комиссия 5%), поэтому это обмен, а не заработок. Если класс дороже суммы, нужна доплата.</p>
+  <p class="muted center">Собери 10 номеров одной редкости и получи 1 номер редкостью выше. Ценность почти равна сумме десяти номеров (комиссия 5%), так что это обмен, а не заработок. Если сумма не дотягивает до новой редкости, нужна доплата.</p>
+  <button class="pill btn small" id="craftAuto">Выбрать 10 самых дешёвых</button>
   <ul class="list rows" id="craftList"></ul>
   <p class="muted center small" id="craftQuote"></p>
   <button class="pill btn wide go" id="craftGo" disabled>Слить</button>
+</dialog>
+
+<dialog id="luckSheet" class="sheet">
+  <div class="grab"></div>
+  <h2>Гарант удачи</h2>
+  <p class="muted center">Чем больше крутишь, тем сильнее удача. Заряд делает одну крутку «лучший из N номеров». Сначала тратится большой заряд, потом малый. На ставках заряды не тратятся.</p>
+  <div id="luckBody"></div>
+  <button class="pill btn wide" id="luckClose">Закрыть</button>
 </dialog>
 
 <dialog id="countrySheet" class="sheet">
@@ -153,12 +162,12 @@
 <dialog id="betSheet" class="sheet">
   <div class="grab"></div>
   <h2>Ставка</h2>
-  <p class="muted center">Выбери, какой редкости будет номер как минимум: ниже планки он не выпадет. Цена равна средней стоимости такого номера, так что ты платишь за скорость, а не за удачу.</p>
+  <p class="muted center">Ставка даёт гарантию: выбираешь планку, и номер точно будет не хуже неё. Платишь заранее, без риска остаться с мусором. Цена равна средней стоимости такого номера, так что это быстрый путь к редким SIM, а не бонус.</p>
   <ul class="list rows" id="betList"></ul>
   <p class="muted center small" id="betFoot"></p>
 </dialog>
 <div class="toast" id="toast" role="status"></div>
 
-<script type="module" src="js/main.js?v=mvx1y7yd"></script>
+<script type="module" src="js/main.js?v=mvycnlow"></script>
 </body>
 </html>

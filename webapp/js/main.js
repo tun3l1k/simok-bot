@@ -1,10 +1,10 @@
-import { CONFIG, AUTO_SELL, BETS, COUNTRIES, OPERATORS, SHOP_ITEMS, TIERS } from './config.js?v=mvx1y7yd';
-import { formatPhone, formatMoney, formatMult } from './generator.js?v=mvx1y7yd';
-import { load, save, fresh } from './state.js?v=mvx1y7yd';
-import * as game from './game.js?v=mvx1y7yd';
-import * as ui from './ui.js?v=mvx1y7yd';
-import { $ } from './ui.js?v=mvx1y7yd';
-import { initTelegram, haptic, hapticDone, shareText, inviteLink } from './telegram.js?v=mvx1y7yd';
+import { CONFIG, CRAFT, AUTO_SELL, BETS, COUNTRIES, OPERATORS, SHOP_ITEMS, TIERS } from './config.js?v=mvycnlow';
+import { formatPhone, formatMoney, formatMult } from './generator.js?v=mvycnlow';
+import { load, save, fresh } from './state.js?v=mvycnlow';
+import * as game from './game.js?v=mvycnlow';
+import * as ui from './ui.js?v=mvycnlow';
+import { $ } from './ui.js?v=mvycnlow';
+import { initTelegram, haptic, hapticDone, shareText, inviteLink } from './telegram.js?v=mvycnlow';
 
 initTelegram();
 let state = load();
@@ -45,7 +45,9 @@ async function onSpin() {
   if (res.soldNow) notes.push(`Автопродажа: +${formatMoney(res.item.price)}`);
   res.overflow.forEach((o) => notes.push(`Коллекция полна (${CONFIG.COLLECTION_MAX}): продан самый дешёвый номер ${formatPhone(o)} за ${formatMoney(o.price)}`));
   res.levelUps.forEach((l) => notes.push(`Уровень ${l.level}: +${formatMoney(l.balance)}`));
-  if (res.luckEarned) notes.push('🍀 Удача x2 готова: следующая крутка выберет лучший из двух');
+  if (res.luck20Earned) notes.push(`🍀 Удача x${CONFIG.LUCK20_BEST_OF} готова: следующая крутка выберет лучший из ${CONFIG.LUCK20_BEST_OF}`);
+  else if (res.luckEarned) notes.push('🍀 Удача x2 готова: следующая крутка выберет лучший из двух');
+  if (res.found) notes.push(res.found.done ? `🗺️ Альбом ${OPERATORS.find((o) => o.id === res.found.op).name} собран: +${formatMoney(res.found.bonus)}` : `🗺️ Новый город: ${res.found.city}`);
   if (notes.length) ui.toast(notes.join('\n'));
   busy = false;
   $('spinBtn').disabled = false;
@@ -57,6 +59,11 @@ $('multiBtn').onclick = () => {
   state.multi = o[(o.indexOf(state.multi) + 1) % o.length];
   renderAll();
 };
+$('digitInfo').onclick = () => {
+  const n = $('digitNote'); n.hidden = !n.hidden;
+  $('digitInfo').setAttribute('aria-expanded', String(!n.hidden));
+};
+$('craftAuto').onclick = () => { craftSel = game.craftAutoPick(state); if (!craftSel.length) ui.toast(`Нужно ${CRAFT.COUNT} номеров одной редкости`); haptic(); craftOpen(); };
 $('autoBtn').onclick = () => { state.autoSell = (state.autoSell + 1) % AUTO_SELL.length; renderAll(); };
 
 // Шторки: закрываются тапом по затемнению
@@ -102,9 +109,10 @@ $('sellBtn').onclick = () => {
   const price = state.pending?.id === item.id ? game.sellPending(state) : game.sellFromCollection(state, item.id);
   if (price) { ui.toast(`Продано за ${formatMoney(price)}`); haptic(); renderAll(); }
 };
-$('luckPill').onclick = () => ui.toast(state.luck > 0
-  ? `🍀 Удача x2 готова${state.luck > 1 ? ` (${state.luck} шт.)` : ''}: следующая крутка выберет лучший из двух`
-  : `🍀 До Удачи x2 осталось ${game.luckLeft(state)} круток. Каждые ${CONFIG.LUCK_EVERY} круток = одна крутка «лучший из 2»`);
+const openLuck = () => { ui.renderLuckSheet(state); $('luckSheet').showModal(); };
+$('luckPill').onclick = openLuck;
+$('luckCard').onclick = openLuck;
+$('luckClose').onclick = () => $('luckSheet').close();
 // «Показать друзьям»: красивое сообщение с карточкой номера, редкостью и серией
 const TIER_DOT = ['⚪', '🟢', '🔵', '🟣', '🟠', '🔴'];
 function bragText(it) {
@@ -169,7 +177,7 @@ $('craftList').onclick = (e) => {
   if (!it) return;
   const first = state.collection.find((x) => x.id === craftSel[0]);
   if (craftSel.includes(id)) craftSel = craftSel.filter((x) => x !== id);
-  else if (first && first.tier === it.tier && craftSel.length < 3) craftSel = [...craftSel, id];
+  else if (first && first.tier === it.tier && craftSel.length < CRAFT.COUNT) craftSel = [...craftSel, id];
   else craftSel = [id];
   haptic();
   craftOpen();
@@ -181,6 +189,7 @@ $('craftGo').onclick = () => {
   hapticDone();
   renderAll();
   $('craftSheet').close();
+  if (res.upgraded) ui.toast(`🎉 Повезло: выпала редкость «${TIERS[res.item.tier].name}»`);
   openDetail(res.item, 'Слияние');
 };
 

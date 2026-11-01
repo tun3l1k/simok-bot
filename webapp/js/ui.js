@@ -1,7 +1,7 @@
-import { skinOf } from './skins.js?v=mvx1y7yd';
-import { CONFIG, TIERS, OPERATORS, AUTO_SELL, BETS, COUNTRIES, SHOP_ITEMS, DIGIT_BONUS, xpForLevel } from './config.js?v=mvx1y7yd';
-import { formatPhone, formatMoney, formatMult } from './generator.js?v=mvx1y7yd';
-import { collectionValue, currentBet, spinCost, operatorOf, luckBestOf, luckLeft, craftQuote } from './game.js?v=mvx1y7yd';
+import { skinOf } from './skins.js?v=mvycnlow';
+import { CONFIG, CRAFT, TIERS, OPERATORS, AUTO_SELL, BETS, COUNTRIES, SHOP_ITEMS, DIGIT_BONUS, xpForLevel } from './config.js?v=mvycnlow';
+import { formatPhone, formatMoney, formatMult } from './generator.js?v=mvycnlow';
+import { collectionValue, currentBet, spinCost, operatorOf, luckBestOf, luckLeft, luck20Left, albumSize, albumFound, craftQuote } from './game.js?v=mvycnlow';
 
 export const countryOf = (s) => COUNTRIES.find((c) => c.id === s.country) ?? COUNTRIES[0];
 
@@ -12,8 +12,11 @@ export function renderHud(s) {
   $('xpbar').style.width = `${Math.min(100, (s.xp / xpForLevel(s.level)) * 100)}%`;
   // Клевер: сколько круток до Удачи x2; когда заряд готов, плашка загорается
   $('luck').textContent = luckLeft(s);
-  $('luckChip').textContent = `x${luckBestOf(s)}${s.luck > 1 ? `·${s.luck}` : ''}`;
-  $('luckPill').classList.toggle('ready', s.luck > 0);
+  const big = s.luck20 > 0;
+  const n = big ? s.luck20 : s.luck;
+  $('luckChip').textContent = `x${big ? CONFIG.LUCK20_BEST_OF : luckBestOf(s)}${n > 1 ? `·${n}` : ''}`;
+  $('luckPill').classList.toggle('ready', s.luck > 0 || big);
+  $('luckPill').classList.toggle('big', big);
   $('balance').textContent = formatMoney(s.balance);
 }
 
@@ -51,11 +54,9 @@ export function renderBetSheet(s) {
 export function renderCountrySheet(s) {
   $('countryGrid').innerHTML = COUNTRIES.map((c) =>
     `<button class="country${c.id === s.country ? ' on' : ''}${c.ready ? '' : ' soon'}" data-country="${c.id}">${c.flag}<span>${c.name}</span></button>`).join('');
-  const short = (arr, n) => arr.slice(0, n).join(', ') + (arr.length > n ? '…' : '');
-  const cities = (o) => short([...new Set(o.codes.map((c) => c.city))].filter((c) => c !== 'Россия'), 3);
   const rows = [
     { id: '', name: 'Любой оператор', sub: OPERATORS.map((o) => o.name).join(' · '), c: ['#f4f1ff', '#cfc6f0', '#a99be0'] },
-    ...OPERATORS.map((o) => ({ id: o.id, name: o.name, sub: `${cities(o)} · ${short(o.codes.map((c) => c.code), 4)}`, c: o.c })),
+    ...OPERATORS.map((o) => ({ id: o.id, name: o.name, sub: `Городов ${albumFound(s, o.id)} из ${albumSize(o.id)} · коды ${o.codes.slice(0, 3).map((c) => c.code).join(', ')}…`, c: o.c })),
   ];
   $('operList').innerHTML = rows.map((r) =>
     `<li><button class="row${(s.operator ?? '') === r.id ? ' on' : ''}" data-oper-id="${r.id}" style="--tier:#fff">
@@ -94,7 +95,7 @@ export function renderPlay(s, view) {
     lines.push(`Код ${item.code} · ${item.city}${item.regionMult > 1 ? ` · <b>×${formatMult(item.regionMult)}</b>` : ''}`);
     if (item.series) lines.push(`Серия «${item.series.name}» <b>×${item.series.mult}</b>${item.odds ? ` · 1 из ${item.odds.toLocaleString('ru-RU')}` : ''}`);
     if (item.digit) lines.push(`Любимая цифра ${item.digit.digit}: ${item.digit.count} шт. <b>×${formatMult(item.digit.mult)}</b>`);
-    if (item.lucky) lines.push(`🍀 Удача: лучший из ${luckBestOf(s)} номеров`);
+    if (item.lucky) { const n = item.lucky === true ? 2 : item.lucky; lines.push(`🍀 Удача x${n}: лучший из ${n} номеров`); }
   }
   $('info').innerHTML = lines.map((l) => `<div>${l}</div>`).join('')
     + (item ? '<button class="link" id="detailLink">Разбор номера ›</button>' : '');
@@ -126,22 +127,39 @@ export function renderCollection(s) {
     : `<li class="empty">Пока пусто. Номера попадают сюда сами, когда крутишь дальше (до ${CONFIG.COLLECTION_MAX} шт.).</li>`;
 }
 
+const totalFound = (s) => OPERATORS.reduce((a, o) => a + albumFound(s, o.id), 0);
+const totalCities = () => OPERATORS.reduce((a, o) => a + albumSize(o.id), 0);
+
+// Окошко «Гарант удачи»: два счётчика и готовые заряды
+export function renderLuckSheet(s) {
+  const card = (best, every, left, ready, hot) => {
+    const done = every - left;
+    return `<div class="lk${hot ? ' hot' : ''}">
+      <div class="lk-top"><b class="lk-x">x${best}</b><span>каждые ${every} круток</span><em>${ready > 0 ? `готово: ${ready}` : `ещё ${left}`}</em></div>
+      <i class="lc-bar"><u style="width:${(done / every) * 100}%"></u></i>
+      <small>${done} из ${every} · одна крутка «лучший из ${best}»</small></div>`;
+  };
+  $('luckBody').innerHTML =
+    card(CONFIG.LUCK20_BEST_OF, CONFIG.LUCK20_EVERY, luck20Left(s), s.luck20, true) +
+    card(luckBestOf(s), CONFIG.LUCK_EVERY, luckLeft(s), s.luck, false);
+}
+
 export function renderMore(s) {
-  const left = luckLeft(s);
-  const pct = ((CONFIG.LUCK_EVERY - left) / CONFIG.LUCK_EVERY) * 100;
+  const ready = s.luck20 > 0 ? `Удача x${CONFIG.LUCK20_BEST_OF} готова` : s.luck > 0 ? `Удача x${luckBestOf(s)} готова` : `До Удачи x${luckBestOf(s)}: ${luckLeft(s)}`;
   $('luckCard').innerHTML = `
     <span class="lc-clover" aria-hidden="true">🍀</span>
     <div class="lc-body">
-      <b>${s.luck > 0 ? `Удача x${luckBestOf(s)} готова${s.luck > 1 ? ` · ${s.luck} шт.` : ''}` : `До Удачи x${luckBestOf(s)}: ${left}`}</b>
-      <small>Каждые ${CONFIG.LUCK_EVERY} круток копится заряд. Он делает одну крутку «лучший из ${luckBestOf(s)}»</small>
-      <i class="lc-bar"><u style="width:${pct}%"></u></i>
-    </div>`;
+      <b>${ready}</b>
+      <small>До x${CONFIG.LUCK20_BEST_OF}: ${luck20Left(s)} круток. Нажми, чтобы посмотреть всё</small>
+      <i class="lc-bar"><u style="width:${((CONFIG.LUCK_EVERY - luckLeft(s)) / CONFIG.LUCK_EVERY) * 100}%"></u></i>
+    </div>
+    <i class="mi-go" aria-hidden="true">›</i>`;
   const stat = (icon, val, label) => `<div class="stat"><span aria-hidden="true">${icon}</span><b>${val}</b><small>${label}</small></div>`;
   $('statsGrid').innerHTML =
     stat('🎰', s.stats.spins.toLocaleString('ru-RU'), 'круток') +
     stat('📱', `${s.collection.length}/${CONFIG.COLLECTION_MAX}`, 'в коллекции') +
     stat('💰', formatMoney(collectionValue(s)), 'цена коллекции') +
-    stat('🔥', s.stats.crafts.toLocaleString('ru-RU'), 'слияний');
+    stat('🗺️', `${totalFound(s)}/${totalCities()}`, 'городов открыто');
   const d = CONFIG.DAILY_BONUS;
   const wait = s.lastDaily + d.cooldownH * 3600e3 - Date.now();
   $('dailySub').textContent = wait > 0 ? `Через ${Math.ceil(wait / 3600e3)} ч` : `Забери ${formatMoney(d.balance)}`;
@@ -194,7 +212,9 @@ export function renderDigits(s) {
   $('digitList').innerHTML = chips.map((c) =>
     `<button class="${s.digit === c.v ? 'on' : ''}" data-digit="${c.v ?? ''}" aria-pressed="${s.digit === c.v}">${c.label}</button>`).join('');
   $('digitHint').textContent = s.digit === null ? 'не выбрана' : `цифра ${s.digit}`;
-  $('digitNote').textContent = 'В номере из 7 цифр: ' + [...DIGIT_BONUS].reverse().map((b) => `от ${b.min} ×${formatMult(b.mult)}`).join(', ') + '. Действует на новые номера.';
+  const bonus = [...DIGIT_BONUS].reverse().map((b) => `<li>от <b>${b.min}</b> таких цифр: цена <b>×${formatMult(b.mult)}</b></li>`).join('');
+  $('digitNote').innerHTML = `<p>Выбери цифру, которую хочешь собирать. Чем чаще она встречается в 7 последних цифрах номера, тем дороже номер.</p><ul>${bonus}</ul>
+    <p>Пример: любимая 7, номер <b>+7 916 777-57-77</b> (шесть семёрок) стоит в ${formatMult(DIGIT_BONUS[0].mult)} раза дороже. Действует только на новые номера и не меняет шансы на редкие серии.</p>`;
 }
 
 // ---------- Разбор номера ----------
@@ -234,20 +254,22 @@ export function renderCraft(s, sel) {
           <span class="row-text"><b class="row-title" style="font-size:16px">${formatPhone(it)}</b><small>${t.name}${it.series ? ` · «${it.series.name}»` : ''}</small></span>
           <span class="row-price">${formatMoney(it.price)}</span><i class="tick" aria-hidden="true"></i></button></li>`;
       }).join('')
-    : '<li class="empty" style="padding:14px 16px">В коллекции пусто. Сохрани несколько номеров, чтобы слить их.</li>';
+    : '<li class="empty" style="padding:14px 16px">В коллекции пусто. Номера попадают сюда сами, когда крутишь дальше.</li>';
 
   const go = $('craftGo');
   go.disabled = true;
   go.textContent = 'Слить';
-  if (picked.length < 3) {
-    $('craftQuote').textContent = `Выбрано ${picked.length} из 3. Номера должны быть одной редкости.`;
+  if (picked.length < CRAFT.COUNT) {
+    $('craftQuote').textContent = `Выбрано ${picked.length} из ${CRAFT.COUNT}. Номера должны быть одной редкости.`;
     return;
   }
   const q = craftQuote(picked);
   if (q.error) { $('craftQuote').textContent = q.error; return; }
   const enough = s.balance >= q.fee;
-  $('craftQuote').innerHTML = `Получишь номер «${TIERS[q.targetTier].name}» или выше (в среднем ≈ ${formatMoney(q.target.avg)}).<br>`
-    + `Сумма номеров ${formatMoney(q.sum)} · доплата ${q.fee ? formatMoney(q.fee) : 'не нужна'}${enough ? '' : ' · не хватает денег'}`;
+  const upLine = q.upTier !== null ? `<br>Шанс <b>${Math.round(q.upChance * 100)}%</b> на «${TIERS[q.upTier].name}»` : '';
+  $('craftQuote').innerHTML = `Гарантия: «${TIERS[q.targetTier].name}» или выше (в среднем ≈ ${formatMoney(q.target.avg)}).${upLine}<br>`
+    + `Сумма номеров ${formatMoney(q.sum)} · доплата ${q.fee ? formatMoney(q.fee) : 'не нужна'}${enough ? '' : ' · не хватает денег'}`
+    + (q.lossy ? '<br>⚠️ Выше этой редкости ничего нет: выгоднее продать номера' : '');
   go.disabled = !enough;
   go.textContent = q.fee ? `Слить · доплата ${formatMoney(q.fee)}` : 'Слить';
 }

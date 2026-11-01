@@ -1,4 +1,4 @@
-import { CONFIG, TIERS, DIGIT_BONUS, codesOf } from './config.js?v=mvx1y7yd';
+import { CONFIG, TIERS, DIGIT_BONUS, codesOf } from './config.js?v=mvycnlow';
 
 const rand = (a, b) => a + Math.random() * (b - a);
 const dig = () => Math.floor(Math.random() * 10);
@@ -143,10 +143,14 @@ export function rollMin(minTier, opts = {}) {
   const need = TIERS[minTier].min;
   const pool = codesOf(opts.op);
   const { s } = pickWeighted(seriesWeights(minTier, pool, opts.op ?? 'any'));
-  for (let i = 0; i < 5000; i++) {
-    const region = pickWeighted(pool);
-    const base = rollBase();
-    if (base * region.mult * s.mult < need) continue;
+  // Только регионы, которым хватает множителя, с весом «шанс региона × доля баз, которые дотягивают»
+  const span = CONFIG.BASE_MAX - CONFIG.BASE_MIN + 1;
+  const minBase = (r) => Math.max(CONFIG.BASE_MIN, Math.ceil(need / (r.mult * s.mult)) - 1);
+  const ok = pool.filter((r) => CONFIG.BASE_MAX * r.mult * s.mult >= need);
+  for (let i = 0; i < 50 && ok.length; i++) {
+    const region = pickWeighted(ok, (r) => r.w * ((CONFIG.BASE_MAX - minBase(r) + 1) / span));
+    const lo = minBase(region);
+    const base = lo + Math.floor(Math.random() * (CONFIG.BASE_MAX - lo + 1));
     const item = makeItem(region, s.make(), base, opts);
     if (item.price >= need) return item;
   }

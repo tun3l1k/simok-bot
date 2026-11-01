@@ -1,10 +1,13 @@
-import { CONFIG, AUTO_SELL, BETS, COUNTRIES, OPERATORS } from './config.js?v=mvx1y7yd';
+import { CONFIG, AUTO_SELL, BETS, COUNTRIES, OPERATORS } from './config.js?v=mvycnlow';
 
 export const fresh = () => ({
   v: 1,
   balance: CONFIG.START_BALANCE,
   luck: CONFIG.START_LUCK, // готовые заряды Удачи (каждый делает одну крутку x2)
-  luckSpins: 0,            // крутки до следующего заряда
+  luckSpins: 0,            // крутки до следующего заряда x2 (0–99)
+  luck20: 0,               // готовые большие заряды (одна крутка «лучший из 20»)
+  luck20Spins: 0,          // крутки до большого заряда (0–499)
+  found: {},               // открытые города по операторам: { mgs: ['Москва', …] }
   level: 1,
   xp: 0,
   collection: [],
@@ -33,6 +36,8 @@ export function load() {
       s.stats = { ...fresh().stats, ...s.stats };
       if (!Number.isInteger(s.luck) || s.luck < 0) s.luck = 0;
       if (!Number.isInteger(s.luckSpins) || s.luckSpins < 0) s.luckSpins = 0;
+      for (const k of ['luck20', 'luck20Spins']) if (!Number.isInteger(s[k]) || s[k] < 0) s[k] = 0;
+      if (!s.found || typeof s.found !== 'object' || Array.isArray(s.found)) s.found = {};
       if (s.operator && !OPERATORS.some((o) => o.id === s.operator)) s.operator = null;
       if (!Number.isInteger(s.digit) || s.digit < 0 || s.digit > 9) s.digit = null;
       if (!COUNTRIES.some((c) => c.id === s.country && c.ready)) s.country = 'ru';
