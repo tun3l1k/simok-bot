@@ -1,7 +1,7 @@
-import { skinOf } from './skins.js?v=mvyd36jy';
-import { CONFIG, CRAFT, TIERS, OPERATORS, AUTO_SELL, BETS, COUNTRIES, SHOP_ITEMS, DIGIT_BONUS, xpForLevel } from './config.js?v=mvyd36jy';
-import { formatPhone, formatMoney, formatMult } from './generator.js?v=mvyd36jy';
-import { collectionValue, currentBet, spinCost, operatorOf, luckBestOf, luckLeft, luck20Left, albumSize, albumFound, craftQuote } from './game.js?v=mvyd36jy';
+import { skinOf } from './skins.js?v=mvz1tfmy';
+import { CONFIG, CRAFT, TIERS, OPERATORS, AUTO_SELL, BETS, COUNTRIES, SHOP_ITEMS, DIGIT_BONUS, xpForLevel } from './config.js?v=mvz1tfmy';
+import { formatPhone, formatMoney, formatMult } from './generator.js?v=mvz1tfmy';
+import { collectionValue, currentBet, spinCost, operatorOf, luckBestOf, luckLeft, luck20Left, albumSize, albumFound, craftQuote } from './game.js?v=mvz1tfmy';
 
 export const countryOf = (s) => COUNTRIES.find((c) => c.id === s.country) ?? COUNTRIES[0];
 
@@ -56,7 +56,7 @@ export function renderCountrySheet(s) {
     `<button class="country${c.id === s.country ? ' on' : ''}${c.ready ? '' : ' soon'}" data-country="${c.id}">${c.flag}<span>${c.name}</span></button>`).join('');
   const rows = [
     { id: '', name: 'Любой оператор', sub: OPERATORS.map((o) => o.name).join(' · '), c: ['#f4f1ff', '#cfc6f0', '#a99be0'] },
-    ...OPERATORS.map((o) => ({ id: o.id, name: o.name, sub: `Городов ${albumFound(s, o.id)} из ${albumSize(o.id)} · коды ${o.codes.slice(0, 3).map((c) => c.code).join(', ')}…`, c: o.c })),
+    ...OPERATORS.map((o) => ({ id: o.id, name: o.name, sub: `Городов ${albumFound(s, o.id)} из ${albumSize(o.id)} · коды ${[...new Set(o.codes.map((c) => c.code))].sort().slice(0, 3).join(', ')}…`, c: o.c })),
   ];
   $('operList').innerHTML = rows.map((r) =>
     `<li><button class="row${(s.operator ?? '') === r.id ? ' on' : ''}" data-oper-id="${r.id}" style="--tier:#fff">

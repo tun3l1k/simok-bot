@@ -1,4 +1,4 @@
-import { CONFIG, AUTO_SELL, BETS, COUNTRIES, OPERATORS } from './config.js?v=mvyd36jy';
+import { CONFIG, AUTO_SELL, BETS, COUNTRIES, OPERATORS } from './config.js?v=mvz1tfmy';
 
 export const fresh = () => ({
   v: 1,

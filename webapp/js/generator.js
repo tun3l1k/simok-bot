@@ -1,4 +1,4 @@
-import { CONFIG, TIERS, DIGIT_BONUS, codesOf } from './config.js?v=mvyd36jy';
+import { CONFIG, TIERS, DIGIT_BONUS, codesOf } from './config.js?v=mvz1tfmy';
 
 const rand = (a, b) => a + Math.random() * (b - a);
 const dig = () => Math.floor(Math.random() * 10);
@@ -11,6 +11,19 @@ function pickWeighted(list, w = (x) => x.w) {
   let r = Math.random() * list.reduce((s, x) => s + w(x), 0);
   for (const x of list) if ((r -= w(x)) < 0) return x;
   return list[list.length - 1];
+}
+
+// Выбор по весам с кешем накопленных сумм: в пуле оператора тысячи записей, а круток миллионы
+const cumCache = new WeakMap();
+function pickPool(list) {
+  let c = cumCache.get(list);
+  if (!c) { c = []; let t = 0; for (const x of list) { t += x.w; c.push(t); } cumCache.set(list, c); }
+  return list[bisect(c, Math.random() * c[c.length - 1])];
+}
+function bisect(c, r) {
+  let lo = 0, hi = c.length - 1;
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (c[mid] > r) hi = mid; else lo = mid + 1; }
+  return lo;
 }
 
 const same = (s) => s.split('').every((c) => c === s[0]);
@@ -112,7 +125,7 @@ function makeItem(region, body, base, opts = {}) {
 
 const rollBase = () => Math.round(rand(CONFIG.BASE_MIN, CONFIG.BASE_MAX));
 export function roll(opts = {}) {
-  const region = pickWeighted(codesOf(opts.op));
+  const region = pickPool(codesOf(opts.op));
   const body = Math.random() < CONFIG.PATTERN_BOOST ? pick(BUILDERS)() : digits(7);
   return makeItem(region, body, rollBase(), opts);
 }
@@ -120,6 +133,7 @@ export function roll(opts = {}) {
 // Вес каждой серии среди номеров нужной редкости: частота серии × шанс, что база и код региона
 // вообще дотянут до цены. Так распределение совпадает с честным «крутить, пока не выпадет», но быстро.
 const tierWeights = {};
+const rollCache = new Map();
 function seriesWeights(minTier, codes, key) {
   const k = `${minTier}:${key}`;
   if (tierWeights[k]) return tierWeights[k];
@@ -129,8 +143,8 @@ function seriesWeights(minTier, codes, key) {
   return (tierWeights[k] = SERIES.map((s) => {
     let reach = 0;
     for (const r of codes) {
-      let n = 0;
-      for (let b = CONFIG.BASE_MIN; b <= CONFIG.BASE_MAX; b++) if (b * r.mult * s.mult >= need) n++;
+      const lo = Math.max(CONFIG.BASE_MIN, Math.ceil(need / (r.mult * s.mult) - 1e-9));
+      const n = Math.max(0, CONFIG.BASE_MAX - lo + 1);
       reach += (r.w / totalW) * (n / span);
     }
     return { s, w: s.p * reach };
@@ -146,9 +160,15 @@ export function rollMin(minTier, opts = {}) {
   // Только регионы, которым хватает множителя, с весом «шанс региона × доля баз, которые дотягивают»
   const span = CONFIG.BASE_MAX - CONFIG.BASE_MIN + 1;
   const minBase = (r) => Math.max(CONFIG.BASE_MIN, Math.ceil(need / (r.mult * s.mult)) - 1);
-  const ok = pool.filter((r) => CONFIG.BASE_MAX * r.mult * s.mult >= need);
-  for (let i = 0; i < 50 && ok.length; i++) {
-    const region = pickWeighted(ok, (r) => r.w * ((CONFIG.BASE_MAX - minBase(r) + 1) / span));
+  const ck = `${minTier}:${opts.op ?? 'any'}:${s.name}`;
+  let cand = rollCache.get(ck);
+  if (!cand) {
+    const ok = pool.filter((r) => CONFIG.BASE_MAX * r.mult * s.mult >= need)
+      .map((r) => ({ ...r, w: r.w * ((CONFIG.BASE_MAX - minBase(r) + 1) / span) }));
+    rollCache.set(ck, cand = ok);
+  }
+  for (let i = 0; i < 50 && cand.length; i++) {
+    const region = pickPool(cand);
     const lo = minBase(region);
     const base = lo + Math.floor(Math.random() * (CONFIG.BASE_MAX - lo + 1));
     const item = makeItem(region, s.make(), base, opts);

@@ -9,7 +9,9 @@
     "web": "npx --yes serve webapp -l 5173",
     "bot": "node --env-file=.env bot/index.js",
     "sim": "node scripts/simulate.js",
-    "stamp": "node scripts/stamp.js"
+    "stamp": "node scripts/stamp.js",
+    "test": "node scripts/smoke-test.js && node scripts/admin-test.js",
+    "registry": "node scripts/build-registry.js"
   },
   "dependencies": { "grammy": "^1.30.0" }
 }
