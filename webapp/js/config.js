@@ -1,6 +1,6 @@
 // Все числа экономики и контента живут здесь. Меняй и проверяй: npm run sim
-import { FLAGS } from './flags.js?v=mvz1tfmy';
-import { REGISTRY } from './registry.js?v=mvz1tfmy';
+import { FLAGS } from './flags.js?v=mvz1xjru';
+import { REGISTRY } from './registry.js?v=mvz1xjru';
 
 export const CONFIG = {
   SAVE_KEY: 'simok_save_v1',
