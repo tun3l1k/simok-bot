@@ -1,0 +1,25 @@
+name = "simok-server"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+# Перед деплоем копируем игровую логику из webapp/js, чтобы сервер и клиент считали игру одним кодом
+[build]
+command = "node ../scripts/sync-shared.js"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "simok"
+database_id = "ВСТАВЬ_ID_БАЗЫ"   # его выдаст `npx wrangler d1 create simok`
+migrations_dir = "migrations"
+
+[triggers]
+crons = ["* * * * *"]             # продолжает рассылки
+
+[vars]
+ALLOWED_ORIGIN = "https://tun3l1k.github.io"   # откуда открыта игра (GitHub Pages)
+WEBAPP_URL = "https://tun3l1k.github.io/simok-bot/"
+
+# Секреты задаются командами `npx wrangler secret put ИМЯ`, в файл их не пиши:
+#   BOT_TOKEN       токен бота от @BotFather
+#   WEBHOOK_SECRET  любая длинная случайная строка (латиница и цифры)
+#   ADMIN_IDS       Telegram id админов через запятую

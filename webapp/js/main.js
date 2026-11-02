@@ -1,18 +1,31 @@
-import { CONFIG, CRAFT, AUTO_SELL, BETS, COUNTRIES, OPERATORS, SHOP_ITEMS, TIERS } from './config.js?v=mvz1xjru';
-import { formatPhone, formatMoney, formatMult } from './generator.js?v=mvz1xjru';
-import { load, save, fresh } from './state.js?v=mvz1xjru';
-import * as game from './game.js?v=mvz1xjru';
-import * as ui from './ui.js?v=mvz1xjru';
-import { $ } from './ui.js?v=mvz1xjru';
-import { initTelegram, haptic, hapticDone, shareText, inviteLink } from './telegram.js?v=mvz1xjru';
+import { CONFIG, CRAFT, AUTO_SELL, BETS, COUNTRIES, OPERATORS, SHOP_ITEMS, TIERS } from './config.js?v=mvzrxy89';
+import { formatPhone, formatMoney, formatMult } from './generator.js?v=mvzrxy89';
+import { load, save, fresh } from './state.js?v=mvzrxy89';
+import * as game from './game.js?v=mvzrxy89';
+import * as ui from './ui.js?v=mvzrxy89';
+import { $ } from './ui.js?v=mvzrxy89';
+import { api, isRemote } from './remote.js?v=mvzrxy89';
+import { initTelegram, haptic, hapticDone, shareText, inviteLink } from './telegram.js?v=mvzrxy89';
 
 initTelegram();
-let state = load();
+// Режим сервера: игру считает Cloudflare Worker, здесь только показ. Без API_URL или вне Telegram играем локально.
+const remote = isRemote();
+let state = remote ? fresh() : load();
 let view = { item: state.pending };
 let busy = false;
 
-const ref = new URLSearchParams(location.search).get('ref');
-if (ref && !state.ref) state.ref = ref;
+if (!remote) {
+  const ref = new URLSearchParams(location.search).get('ref');
+  if (ref && !state.ref) state.ref = ref;
+}
+
+// Одно действие: на сервере или локально. Ответ сервера сразу становится нашим состоянием.
+async function act(action, body, local) {
+  if (!remote) return local();
+  const out = await api(action, state, body);
+  if (out.state) state = out.state;
+  return out;
+}
 
 function renderAll() {
   ui.renderHud(state);
@@ -20,20 +33,26 @@ function renderAll() {
   ui.renderPlay(state, view);
   ui.renderCollection(state);
   ui.renderMore(state);
-  save(state);
+  if (!remote) save(state);
 }
 
 async function onSpin() {
   if (busy) return;
-  if (game.bailout(state)) ui.toast(`Пособие ${formatMoney(CONFIG.BAILOUT)}: крути дальше`);
   busy = true;
   $('spinBtn').disabled = true;
-  const res = game.spin(state, state.multi);
-  if (res.error) {
-    ui.toast(res.error);
+  const out = await act('spin', {}, () => {
+    const bailout = game.bailout(state);
+    const r = game.spin(state, state.multi);
+    return r.error ? { error: r.error } : { res: r, bailout };
+  });
+  if (out.error) {
+    if (out.state) renderAll();
+    ui.toast(out.error);
     busy = false; $('spinBtn').disabled = false;
     return;
   }
+  const res = out.res;
+  if (out.bailout) ui.toast(`Пособие ${formatMoney(CONFIG.BAILOUT)}: крути дальше`);
   haptic('medium');
   await ui.animateNumber();
   view = { item: res.item };
@@ -103,12 +122,18 @@ $('betList').onclick = (e) => {
   $('betSheet').close();
 };
 
-$('sellBtn').onclick = () => {
-  const item = view.item;
-  if (!item) return;
-  const price = state.pending?.id === item.id ? game.sellPending(state) : game.sellFromCollection(state, item.id);
-  if (price) { ui.toast(`Продано за ${formatMoney(price)}`); haptic(); renderAll(); }
-};
+async function sellItem(id) {
+  const out = await act('sell', { id }, () => {
+    const price = state.pending?.id === id ? game.sellPending(state) : game.sellFromCollection(state, id);
+    return price ? { price } : { error: 'Номер не найден' };
+  });
+  if (out.error) { ui.toast(out.error); if (out.state) { view = { item: state.pending }; renderAll(); } return; }
+  ui.toast(`Продано за ${formatMoney(out.price)}`);
+  haptic();
+  if (remote && view.item?.id === id) view = { item: state.pending };
+  renderAll();
+}
+$('sellBtn').onclick = () => { if (view.item) sellItem(view.item.id); };
 const openLuck = () => { ui.renderLuckSheet(state); $('luckSheet').showModal(); };
 $('luckPill').onclick = openLuck;
 $('luckCard').onclick = openLuck;
@@ -142,11 +167,7 @@ $('info').onclick = (e) => { if (e.target.closest('#detailLink')) openDetail(vie
 
 $('collectionList').onclick = (e) => {
   const id = e.target.dataset?.sell;
-  if (id) {
-    const price = game.sellFromCollection(state, id);
-    if (price) { ui.toast(`Продано за ${formatMoney(price)}`); haptic(); renderAll(); }
-    return;
-  }
+  if (id) { sellItem(id); return; }
   const did = e.target.closest('[data-detail]')?.dataset.detail;
   if (did) openDetail(state.collection.find((x) => x.id === did));
 };
@@ -182,9 +203,13 @@ $('craftList').onclick = (e) => {
   haptic();
   craftOpen();
 };
-$('craftGo').onclick = () => {
-  const res = game.craft(state, craftSel);
-  if (res.error) { ui.toast(res.error); return; }
+$('craftGo').onclick = async () => {
+  const out = await act('craft', { ids: craftSel }, () => {
+    const r = game.craft(state, craftSel);
+    return r.error ? { error: r.error } : { res: r };
+  });
+  if (out.error) { ui.toast(out.error); return; }
+  const res = out.res;
   craftSel = [];
   hapticDone();
   renderAll();
@@ -197,14 +222,19 @@ const invite = () => shareText('Крути SIM-карты и собирай кр
 $('inviteBtn').onclick = invite;
 $('inviteBtn2').onclick = invite;
 
-$('dailyBtn').onclick = () => {
-  const d = game.claimDaily(state);
-  if (d) { ui.toast(`Бонус: +${formatMoney(d.balance)}`); hapticDone(); renderAll(); }
-  else ui.toast('Бонус уже получен. Загляни позже');
+$('dailyBtn').onclick = async () => {
+  const out = await act('daily', {}, () => {
+    const d = game.claimDaily(state);
+    return d ? { bonus: d } : { error: 'Бонус уже получен. Загляни позже' };
+  });
+  if (out.error) { ui.toast(out.error); return; }
+  ui.toast(`Бонус: +${formatMoney(out.bonus.balance)}`); hapticDone(); renderAll();
 };
-$('resetBtn').onclick = () => {
+$('resetBtn').onclick = async () => {
   if (!confirm('Сбросить весь прогресс?')) return;
-  state = fresh(); view = { item: null }; renderAll(); ui.showView('play');
+  const out = await act('reset', {}, () => { state = fresh(); return {}; });
+  if (out.error) { ui.toast(out.error); return; }
+  view = { item: null }; renderAll(); ui.showView('play');
 };
 
 // Магазин: пока заглушка
@@ -219,6 +249,20 @@ $('shopList').onclick = (e) => {
   }
 };
 
-const daily = game.claimDaily(state);
-renderAll();
-if (daily) ui.toast(`Ежедневный бонус: +${formatMoney(daily.balance)}`);
+if (remote) {
+  // состояние берём с сервера; пока ответа нет, кнопка крутки выключена
+  $('spinBtn').disabled = true;
+  const first = await api('state', state);
+  if (first.state) {
+    state = first.state;
+    view = { item: state.pending };
+    $('spinBtn').disabled = false;
+  } else ui.toast(first.error || 'Сервер недоступен');
+  renderAll();
+  const d = first.state ? await act('daily', {}, null) : null;
+  if (d?.bonus) { renderAll(); ui.toast(`Ежедневный бонус: +${formatMoney(d.bonus.balance)}`); }
+} else {
+  const daily = game.claimDaily(state);
+  renderAll();
+  if (daily) ui.toast(`Ежедневный бонус: +${formatMoney(daily.balance)}`);
+}

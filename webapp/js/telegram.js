@@ -1,5 +1,7 @@
 const tg = window.Telegram?.WebApp;
 
+export const getInitData = () => tg?.initData || '';
+
 export function initTelegram() {
   if (!tg) return;
   tg.ready();

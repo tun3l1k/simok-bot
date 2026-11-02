@@ -1,4 +1,4 @@
-import { CONFIG, AUTO_SELL, BETS, COUNTRIES, OPERATORS } from './config.js?v=mvz1xjru';
+import { CONFIG, AUTO_SELL, BETS, COUNTRIES, OPERATORS } from './config.js?v=mvzrxy89';
 
 export const fresh = () => ({
   v: 1,
@@ -23,26 +23,40 @@ export const fresh = () => ({
   ref: null,
 });
 
-// Пока всё хранится в localStorage. Для денег и рынка нужен бэкенд (см. README).
+// Приводит сохранение к рабочему виду: недостающие поля, неверные значения. Нужна и клиенту, и серверу.
+export function sanitize(raw) {
+  const s = { ...fresh(), ...raw };
+  if (!BETS[s.bet]) s.bet = 0;
+  delete s.autoKeep;
+  if (!AUTO_SELL[s.autoSell]) s.autoSell = 0;
+  delete s.uiScale; // раньше был выбор размера интерфейса, теперь размер один
+  s.stats = { ...fresh().stats, ...s.stats };
+  if (!Number.isInteger(s.luck) || s.luck < 0) s.luck = 0;
+  if (!Number.isInteger(s.luckSpins) || s.luckSpins < 0) s.luckSpins = 0;
+  for (const k of ['luck20', 'luck20Spins']) if (!Number.isInteger(s[k]) || s[k] < 0) s[k] = 0;
+  if (!s.found || typeof s.found !== 'object' || Array.isArray(s.found)) s.found = {};
+  if (s.operator && !OPERATORS.some((o) => o.id === s.operator)) s.operator = null;
+  if (!Number.isInteger(s.digit) || s.digit < 0 || s.digit > 9) s.digit = null;
+  if (!CONFIG.MULTI_OPTIONS.includes(s.multi)) s.multi = 1;
+  if (!COUNTRIES.some((c) => c.id === s.country && c.ready)) s.country = 'ru';
+  return s;
+}
+
+// Настройки, которые игрок меняет сам. Сервер принимает только их и только после проверки.
+export const SETTING_KEYS = ['multi', 'bet', 'operator', 'digit', 'autoSell', 'country'];
+export const pickSettings = (s) => Object.fromEntries(SETTING_KEYS.map((k) => [k, s[k]]));
+export function applySettings(s, incoming) {
+  if (!incoming || typeof incoming !== 'object') return s;
+  const merged = sanitize({ ...s, ...Object.fromEntries(SETTING_KEYS.filter((k) => k in incoming).map((k) => [k, incoming[k]])) });
+  for (const k of SETTING_KEYS) s[k] = merged[k];
+  return s;
+}
+
+// Без сервера всё хранится в localStorage (локальный режим для разработки).
 export function load() {
   try {
     const raw = localStorage.getItem(CONFIG.SAVE_KEY);
-    if (raw) {
-      const s = { ...fresh(), ...JSON.parse(raw) };
-      if (!BETS[s.bet]) s.bet = 0;
-      delete s.autoKeep;
-      if (!AUTO_SELL[s.autoSell]) s.autoSell = 0;
-      delete s.uiScale; // раньше был выбор размера интерфейса, теперь размер один
-      s.stats = { ...fresh().stats, ...s.stats };
-      if (!Number.isInteger(s.luck) || s.luck < 0) s.luck = 0;
-      if (!Number.isInteger(s.luckSpins) || s.luckSpins < 0) s.luckSpins = 0;
-      for (const k of ['luck20', 'luck20Spins']) if (!Number.isInteger(s[k]) || s[k] < 0) s[k] = 0;
-      if (!s.found || typeof s.found !== 'object' || Array.isArray(s.found)) s.found = {};
-      if (s.operator && !OPERATORS.some((o) => o.id === s.operator)) s.operator = null;
-      if (!Number.isInteger(s.digit) || s.digit < 0 || s.digit > 9) s.digit = null;
-      if (!COUNTRIES.some((c) => c.id === s.country && c.ready)) s.country = 'ru';
-      return s;
-    }
+    if (raw) return sanitize(JSON.parse(raw));
   } catch { /* повреждённое сохранение: начинаем заново */ }
   return fresh();
 }
