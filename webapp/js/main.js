@@ -1,11 +1,11 @@
-import { CONFIG, CRAFT, AUTO_SELL, BETS, COUNTRIES, OPERATORS, SHOP_ITEMS, TIERS } from './config.js?v=mw0pvapb';
-import { formatPhone, formatMoney, formatMult } from './generator.js?v=mw0pvapb';
-import { load, save, fresh, sanitize } from './state.js?v=mw0pvapb';
-import * as game from './game.js?v=mw0pvapb';
-import * as ui from './ui.js?v=mw0pvapb';
-import { $ } from './ui.js?v=mw0pvapb';
-import { api, isRemote, net } from './remote.js?v=mw0pvapb';
-import { initTelegram, haptic, hapticDone, shareText, inviteLink } from './telegram.js?v=mw0pvapb';
+import { CONFIG, CRAFT, AUTO_SELL, BETS, COUNTRIES, OPERATORS, SHOP_ITEMS, TIERS } from './config.js?v=mw14t2cv';
+import { formatPhone, formatMoney, formatMult } from './generator.js?v=mw14t2cv';
+import { load, save, fresh, sanitize } from './state.js?v=mw14t2cv';
+import * as game from './game.js?v=mw14t2cv';
+import * as ui from './ui.js?v=mw14t2cv';
+import { $ } from './ui.js?v=mw14t2cv';
+import { api, isRemote, net } from './remote.js?v=mw14t2cv';
+import { initTelegram, haptic, hapticDone, shareText, inviteLink } from './telegram.js?v=mw14t2cv';
 
 initTelegram();
 // Режим сервера: игру считает Cloudflare Worker, здесь только показ. Без API_URL или вне Telegram играем локально.
@@ -17,6 +17,25 @@ let busy = false;
 if (!remote) {
   const ref = new URLSearchParams(location.search).get('ref');
   if (ref && !state.ref) state.ref = ref;
+}
+
+// Быстрые действия (продажа) показываем сразу, а серверу отправляем фоном по очереди
+let chain = Promise.resolve();
+let inflight = 0;
+function sync(action, body) {
+  if (!remote) return;
+  inflight++;
+  chain = chain.then(async () => {
+    const out = await api(action, state, body);
+    inflight--;
+    if (out.error && !out.state) { ui.toast(out.error); return; }
+    if (out.error) ui.toast(out.error);
+    if (inflight === 0 && out.state) {
+      state = out.state;
+      if (view.item && state.pending?.id !== view.item.id && !state.collection.some((x) => x.id === view.item.id)) view = { item: state.pending };
+      renderAll();
+    }
+  });
 }
 
 // Одно действие: на сервере или локально. Ответ сервера сразу становится нашим состоянием.
@@ -42,6 +61,7 @@ async function onSpin() {
   busy = true;
   // анимация идёт сразу, пока сервер считает
   const anim = ui.animateNumber();
+  await chain; // сначала дожидаемся фоновых продаж
   const out = await act('spin', {}, () => {
     const bailout = game.bailout(state);
     const r = game.spin(state, state.multi);
@@ -83,7 +103,6 @@ $('digitInfo').onclick = () => {
   const n = $('digitNote'); n.hidden = !n.hidden;
   $('digitInfo').setAttribute('aria-expanded', String(!n.hidden));
 };
-$('craftAuto').onclick = () => { craftSel = game.craftAutoPick(state); if (!craftSel.length) ui.toast(`Нужно ${CRAFT.COUNT} номеров одной редкости`); haptic(); craftOpen(); };
 $('autoBtn').onclick = () => { state.autoSell = (state.autoSell + 1) % AUTO_SELL.length; renderAll(); };
 
 // Шторки: закрываются тапом по затемнению
@@ -123,17 +142,27 @@ $('betList').onclick = (e) => {
   $('betSheet').close();
 };
 
-async function sellItem(id) {
-  const out = await act('sell', { id }, () => {
-    const price = state.pending?.id === id ? game.sellPending(state) : game.sellFromCollection(state, id);
-    return price ? { price } : { error: 'Номер не найден' };
-  });
-  if (out.error) { ui.toast(out.error); if (out.state) { view = { item: state.pending }; renderAll(); } return; }
-  ui.toast(`Продано за ${formatMoney(out.price)}`);
+function sellItem(id) {
+  if (busy) return;
+  const price = state.pending?.id === id ? game.sellPending(state) : game.sellFromCollection(state, id);
+  if (!price) { ui.toast('Номер не найден'); return; }
+  ui.toast(`Продано за ${formatMoney(price)}`);
   haptic();
-  if (remote && view.item?.id === id) view = { item: state.pending };
+  if (view.item?.id === id) view = { item: state.pending };
   renderAll();
+  sync('sell', { id });
 }
+$('sellAllBtn').onclick = () => {
+  if (busy || !state.collection.length) { if (!state.collection.length) ui.toast('Коллекция пуста'); return; }
+  const n = state.collection.length;
+  const sum = state.collection.reduce((a, x) => a + x.price, 0);
+  if (!confirm(`Продать все ${n} номеров за ${formatMoney(sum)}?`)) return;
+  game.sellAll(state);
+  ui.toast(`Продано ${n} шт. за ${formatMoney(sum)}`);
+  hapticDone();
+  renderAll();
+  sync('sellall', {});
+};
 $('sellBtn').onclick = () => { if (view.item) sellItem(view.item.id); };
 const openLuck = () => { ui.renderLuckSheet(state); $('luckSheet').showModal(); };
 $('luckPill').onclick = openLuck;
@@ -193,14 +222,24 @@ $('digitList').onclick = (e) => {
 let craftSel = [];
 const craftOpen = () => { ui.renderCraft(state, craftSel); };
 $('craftBtn').onclick = () => { craftSel = []; craftOpen(); $('craftSheet').showModal(); };
+$('craftQuick').onclick = (e) => {
+  const t = e.target.closest('[data-quick]')?.dataset.quick;
+  if (t === undefined) return;
+  craftSel = game.craftAutoPick(state, Number(t));
+  haptic();
+  craftOpen();
+};
 $('craftList').onclick = (e) => {
   const id = e.target.closest('[data-craft]')?.dataset.craft;
   const it = state.collection.find((x) => x.id === id);
   if (!it) return;
   const first = state.collection.find((x) => x.id === craftSel[0]);
   if (craftSel.includes(id)) craftSel = craftSel.filter((x) => x !== id);
-  else if (first && first.tier === it.tier && craftSel.length < CRAFT.COUNT) craftSel = [...craftSel, id];
-  else craftSel = [id];
+  else if (first && first.tier === it.tier) {
+    // 11-й номер не сбрасывает выбор: просто не добавляется
+    if (craftSel.length >= CRAFT.COUNT) { ui.toast(`Уже выбрано ${CRAFT.COUNT}. Сними один номер, чтобы выбрать другой`); return; }
+    craftSel = [...craftSel, id];
+  } else craftSel = [id];
   haptic();
   craftOpen();
 };

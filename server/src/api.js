@@ -45,6 +45,10 @@ const ACTIONS = {
     const price = s.pending?.id === id ? game.sellPending(s) : game.sellFromCollection(s, id);
     return price ? { price } : { error: 'Номер не найден', noSave: true };
   },
+  sellall(s) {
+    const r = game.sellAll(s);
+    return r.count ? r : { error: 'Коллекция пуста', noSave: true };
+  },
   craft(s, body) {
     const ids = body.ids;
     if (!Array.isArray(ids) || ids.length !== CRAFT.COUNT || ids.some((x) => typeof x !== 'string')) return { error: `Нужно ${CRAFT.COUNT} номеров`, noSave: true };

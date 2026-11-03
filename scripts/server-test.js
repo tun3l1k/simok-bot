@@ -97,6 +97,14 @@ assert.equal(r.state.balance, before.balance + before.pending.price);
 assert.equal(r.state.pending, null);
 assert.ok((await call('sell', { id: pendingId })).error, 'повторно продать нельзя');
 assert.ok((await call('sell', { id: 'чужой' })).error);
+{
+  const before = (await call('state')).state;
+  const r2 = await call('sellall');
+  const expect = before.collection.reduce((x, y) => x + y.price, 0);
+  assert.equal(r2.state.collection.length, 0, 'продать все очищает коллекцию');
+  assert.equal(r2.state.balance, before.balance + expect, 'продать все: сумма по ценам сервера');
+  assert.ok((await call('sellall')).error, 'пустую коллекцию продать нельзя');
+}
 
 // бонус раз в сутки
 r = await call('daily'); assert.ok(r.bonus && r.state.balance > before.balance);

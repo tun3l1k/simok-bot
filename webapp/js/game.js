@@ -1,5 +1,5 @@
-import { CONFIG, AUTO_SELL, BETS, OPERATORS, CRAFT, xpForLevel, levelReward } from './config.js?v=mw0pvapb';
-import { roll, rollMin } from './generator.js?v=mw0pvapb';
+import { CONFIG, AUTO_SELL, BETS, OPERATORS, CRAFT, xpForLevel, levelReward } from './config.js?v=mw14t2cv';
+import { roll, rollMin } from './generator.js?v=mw14t2cv';
 
 export const currentBet = (s) => BETS[s.bet] ?? BETS[0];
 export const spinCost = (s, count = s.multi) => currentBet(s).cost * count;
@@ -139,6 +139,15 @@ export function sellFromCollection(s, id) {
   return it.price;
 }
 
+// Продать всю коллекцию разом (выпавший номер на экране остаётся)
+export function sellAll(s) {
+  const count = s.collection.length;
+  const total = s.collection.reduce((a, x) => a + x.price, 0);
+  s.collection = [];
+  s.balance += total;
+  return { count, total };
+}
+
 // ---------- Слияние: 10 номеров одной редкости → 1 номер редкостью выше ----------
 // Ценность на выходе почти равна сумме номеров минус комиссия. Гарантируется самая высокая редкость, чья средняя цена
 // не больше суммы (но не ниже следующей), а разницу до редкости ещё выше выдаёт шанс. Если сумма не дотягивает даже
@@ -177,8 +186,8 @@ export function craft(s, ids) {
 }
 
 // Самые дешёвые CRAFT.COUNT номеров из самой низкой редкости, где их хватает
-export function craftAutoPick(s) {
-  for (let t = 0; t < BETS.length - 1; t++) {
+export function craftAutoPick(s, onlyTier = null) {
+  for (let t = onlyTier ?? 0; t < (onlyTier === null ? BETS.length - 1 : onlyTier + 1); t++) {
     const pool = s.collection.filter((x) => x.tier === t).sort((a, b) => a.price - b.price);
     if (pool.length >= CRAFT.COUNT) return pool.slice(0, CRAFT.COUNT).map((x) => x.id);
   }
