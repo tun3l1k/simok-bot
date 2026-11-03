@@ -48,18 +48,15 @@ scripts/build-registry.js собирает registry.js из CSV Россвязи
 
 Игру считает Worker, прогресс лежит в базе D1. Клиент шлёт только «что хочу сделать», баланс, номера и цены берутся из базы, подпись Telegram (`initData`) проверяется на каждом запросе.
 
+Конфиг Worker лежит в корне репозитория (`wrangler.toml`), поэтому Root directory в Cloudflare менять не нужно.
+
 1. Создай бота в @BotFather (`/newbot`), сохрани токен. Узнай свой Telegram id (например, у @userinfobot).
-2. `cd server && npm install && npx wrangler login`
-3. `npm run db:create`, скопируй выданный `database_id` в `server/wrangler.toml`.
-4. `npm run db:migrate`
-5. Секреты (каждая команда спросит значение):
-   - `npx wrangler secret put BOT_TOKEN` (токен бота)
-   - `npx wrangler secret put WEBHOOK_SECRET` (любая длинная случайная строка из букв и цифр)
-   - `npx wrangler secret put ADMIN_IDS` (твой id, несколько через запятую)
-6. Проверь `ALLOWED_ORIGIN` и `WEBAPP_URL` в `wrangler.toml` (адрес, где лежит `webapp/`).
-7. `npm run deploy`. Wrangler покажет адрес `https://simok-server.<аккаунт>.workers.dev`.
-8. Открой в браузере `https://<адрес воркера>/setup/<WEBHOOK_SECRET>`: он зарегистрирует вебхук бота, команды и кнопку меню.
-9. В `webapp/js/config.js` впиши `API_URL` с адресом воркера, затем `npm run stamp`, коммит и push.
+2. В Cloudflare: Workers → Create → Import a repository, выбери этот репозиторий, имя Worker `simok-bot`. Build command пустой, Deploy command `npx wrangler deploy`.
+3. База: Storage & Databases → D1 → Create `simok`, `database_id` впиши в `wrangler.toml`. Схему из `server/migrations/0001_init.sql` выполни в консоли D1 (или `npm run db:migrate`).
+4. Settings → Variables and Secrets (после первого деплоя): секреты `BOT_TOKEN`, `WEBHOOK_SECRET` (любая длинная случайная строка из букв и цифр), `ADMIN_IDS` (твой id, несколько через запятую).
+5. Проверь `ALLOWED_ORIGIN` и `WEBAPP_URL` в `wrangler.toml` (адрес, где лежит `webapp/`).
+6. Открой в браузере `https://<адрес воркера>/setup/<WEBHOOK_SECRET>`: он зарегистрирует вебхук бота, команды и кнопку меню.
+7. В `webapp/js/config.js` впиши `API_URL` с адресом воркера, затем `npm run stamp`, коммит и push.
 
 Прогресс из localStorage на сервер не переносится (иначе баланс можно было бы подделать): игроки начинают с нуля.
 

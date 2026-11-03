@@ -13,6 +13,16 @@
     "stamp": "node scripts/stamp.js",
     "test": "node scripts/smoke-test.js && node scripts/server-test.js",
     "registry": "node scripts/build-registry.js",
-    "sync": "node scripts/sync-shared.js"
+    "sync": "node scripts/sync-shared.js",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:migrate": "wrangler d1 migrations apply simok --remote",
+    "db:migrate:local": "wrangler d1 migrations apply simok --local"
+  },
+  "dependencies": {
+    "grammy": "^1.30.0"
+  },
+  "devDependencies": {
+    "wrangler": "^3.90.0"
   }
 }

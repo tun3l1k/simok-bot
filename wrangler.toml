@@ -1,16 +1,16 @@
-name = "simok-server"
-main = "src/index.js"
+name = "simok-bot"
+main = "server/src/index.js"
 compatibility_date = "2025-01-01"
 
 # Перед деплоем копируем игровую логику из webapp/js, чтобы сервер и клиент считали игру одним кодом
 [build]
-command = "node ../scripts/sync-shared.js"
+command = "node scripts/sync-shared.js"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "simok"
 database_id = "e401ba90-3270-436f-b852-c5387dbe95c8"   # его выдаст `npx wrangler d1 create simok`
-migrations_dir = "migrations"
+migrations_dir = "server/migrations"
 
 [triggers]
 crons = ["* * * * *"]             # продолжает рассылки
