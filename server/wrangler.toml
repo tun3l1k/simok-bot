@@ -9,7 +9,7 @@ command = "node ../scripts/sync-shared.js"
 [[d1_databases]]
 binding = "DB"
 database_name = "simok"
-database_id = "ВСТАВЬ_ID_БАЗЫ"   # его выдаст `npx wrangler d1 create simok`
+database_id = "e401ba90-3270-436f-b852-c5387dbe95c8"   # его выдаст `npx wrangler d1 create simok`
 migrations_dir = "migrations"
 
 [triggers]
