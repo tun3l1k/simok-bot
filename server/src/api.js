@@ -84,14 +84,11 @@ export async function runAction(db, userId, action, body, now = Date.now()) {
 }
 
 export async function handleApi(request, env, { store, db, now = Date.now(), waitUntil }) {
+  const started = Date.now();
   const cors = corsHeaders(env, request);
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
   const action = new URL(request.url).pathname.replace(/^\/api\//, '');
   if (request.method !== 'POST' || !Object.hasOwn(ACTIONS, action)) return reply({ error: 'Не найдено' }, 404, cors);
-
-  const auth = request.headers.get('Authorization') ?? '';
-  const who = auth.startsWith('tma ') ? await verifyInitData(auth.slice(4), env.BOT_TOKEN, { now }) : null;
-  if (!who) return reply({ error: 'Нет доступа: открой игру через Telegram' }, 401, cors);
 
   const text = await request.text();
   if (text.length > MAX_BODY) return reply({ error: 'Слишком большой запрос' }, 413, cors);
@@ -99,11 +96,18 @@ export async function handleApi(request, env, { store, db, now = Date.now(), wai
   try { body = text ? JSON.parse(text) : {}; } catch { return reply({ error: 'Неверный запрос' }, 400, cors); }
   if (!body || typeof body !== 'object' || Array.isArray(body)) body = {};
 
+  // подпись Telegram: в заголовке или в теле (из браузера шлём в теле, чтобы не было предзапроса OPTIONS)
+  const auth = request.headers.get('Authorization') ?? '';
+  const initData = auth.startsWith('tma ') ? auth.slice(4) : typeof body.initData === 'string' ? body.initData : '';
+  const who = initData ? await verifyInitData(initData, env.BOT_TOKEN, { now }) : null;
+  if (!who) return reply({ error: 'Нет доступа: открой игру через Telegram' }, 401, cors);
+
   const ref = typeof body.ref === 'string' && /^\d{1,15}$/.test(body.ref) ? body.ref : null;
   // запись «был в игре» не задерживает ответ игроку
   const touching = store.touch(who.user, { ref });
   if (waitUntil) waitUntil(touching.catch(() => {}));
   const out = await runAction(db, who.user.id, action, body, now);
   if (!waitUntil) await touching;
+  out.ms = Date.now() - started;
   return reply(out, out.busy ? 503 : 200, cors);
 }

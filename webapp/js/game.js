@@ -1,5 +1,5 @@
-import { CONFIG, AUTO_SELL, BETS, OPERATORS, CRAFT, xpForLevel, levelReward } from './config.js?v=mw0ptf7h';
-import { roll, rollMin } from './generator.js?v=mw0ptf7h';
+import { CONFIG, AUTO_SELL, BETS, OPERATORS, CRAFT, xpForLevel, levelReward } from './config.js?v=mw0pvapb';
+import { roll, rollMin } from './generator.js?v=mw0pvapb';
 
 export const currentBet = (s) => BETS[s.bet] ?? BETS[0];
 export const spinCost = (s, count = s.multi) => currentBet(s).cost * count;

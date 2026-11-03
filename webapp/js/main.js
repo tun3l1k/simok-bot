@@ -1,11 +1,11 @@
-import { CONFIG, CRAFT, AUTO_SELL, BETS, COUNTRIES, OPERATORS, SHOP_ITEMS, TIERS } from './config.js?v=mw0ptf7h';
-import { formatPhone, formatMoney, formatMult } from './generator.js?v=mw0ptf7h';
-import { load, save, fresh, sanitize } from './state.js?v=mw0ptf7h';
-import * as game from './game.js?v=mw0ptf7h';
-import * as ui from './ui.js?v=mw0ptf7h';
-import { $ } from './ui.js?v=mw0ptf7h';
-import { api, isRemote } from './remote.js?v=mw0ptf7h';
-import { initTelegram, haptic, hapticDone, shareText, inviteLink } from './telegram.js?v=mw0ptf7h';
+import { CONFIG, CRAFT, AUTO_SELL, BETS, COUNTRIES, OPERATORS, SHOP_ITEMS, TIERS } from './config.js?v=mw0pvapb';
+import { formatPhone, formatMoney, formatMult } from './generator.js?v=mw0pvapb';
+import { load, save, fresh, sanitize } from './state.js?v=mw0pvapb';
+import * as game from './game.js?v=mw0pvapb';
+import * as ui from './ui.js?v=mw0pvapb';
+import { $ } from './ui.js?v=mw0pvapb';
+import { api, isRemote, net } from './remote.js?v=mw0pvapb';
+import { initTelegram, haptic, hapticDone, shareText, inviteLink } from './telegram.js?v=mw0pvapb';
 
 initTelegram();
 // Режим сервера: игру считает Cloudflare Worker, здесь только показ. Без API_URL или вне Telegram играем локально.
@@ -239,7 +239,10 @@ $('resetBtn').onclick = async () => {
 };
 
 // Магазин: пока заглушка
-$('settingsBtn').onclick = () => $('settingsSheet').showModal();
+$('settingsBtn').onclick = () => {
+  $('netInfo').textContent = remote ? (net.rtt === null ? 'Связь с сервером: ещё не было запросов' : `Связь с сервером: ${net.rtt} мс (сервер считал ${net.server ?? '?'} мс)`) : 'Играешь без сервера';
+  $('settingsSheet').showModal();
+};
 $('settingsClose').onclick = () => $('settingsSheet').close();
 ui.renderShop();
 $('shopBtn').onclick = () => $('shop').showModal();
