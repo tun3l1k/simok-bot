@@ -17,7 +17,7 @@ crons = ["* * * * *"]             # продолжает рассылки
 
 [vars]
 ALLOWED_ORIGIN = "https://tun3l1k.github.io"   # откуда открыта игра (GitHub Pages)
-WEBAPP_URL = "https://tun3l1k.github.io/simok-bot/"
+WEBAPP_URL = "https://tun3l1k.github.io/simok-bot/webapp/"
 
 # Секреты задаются командами `npx wrangler secret put ИМЯ`, в файл их не пиши:
 #   BOT_TOKEN       токен бота от @BotFather
