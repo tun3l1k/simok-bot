@@ -1,11 +1,11 @@
 // Все числа экономики и контента живут здесь. Меняй и проверяй: npm run sim
-import { FLAGS } from './flags.js?v=mvzrxy89';
-import { REGISTRY } from './registry.js?v=mvzrxy89';
+import { FLAGS } from './flags.js?v=mw0pkp4k';
+import { REGISTRY } from './registry.js?v=mw0pkp4k';
 
 export const CONFIG = {
   SAVE_KEY: 'simok_save_v1',
   BOT_USERNAME: 'SimOkBot', // имя бота без @
-  API_URL: '',              // адрес Cloudflare Worker (https://simok-server.<аккаунт>.workers.dev). Пусто = локальный режим
+  API_URL: 'https://simok-bot.tunlstandoff.workers.dev',              // адрес Cloudflare Worker (https://simok-server.<аккаунт>.workers.dev). Пусто = локальный режим
   SPIN_COST: 500,
   START_BALANCE: 10000,
   START_LUCK: 0,
