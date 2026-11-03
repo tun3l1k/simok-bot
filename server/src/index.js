@@ -45,9 +45,9 @@ function getBot(env) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    if (url.pathname.startsWith('/api/')) return handleApi(request, env, { store: createStore(env.DB), db: env.DB });
+    if (url.pathname.startsWith('/api/')) return handleApi(request, env, { store: createStore(env.DB), db: env.DB, waitUntil: (p) => ctx.waitUntil(p) });
 
     if (url.pathname === '/bot' && request.method === 'POST') return getBot(env).handle(request);
 

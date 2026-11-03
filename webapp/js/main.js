@@ -1,11 +1,11 @@
-import { CONFIG, CRAFT, AUTO_SELL, BETS, COUNTRIES, OPERATORS, SHOP_ITEMS, TIERS } from './config.js?v=mw0pkp4k';
-import { formatPhone, formatMoney, formatMult } from './generator.js?v=mw0pkp4k';
-import { load, save, fresh } from './state.js?v=mw0pkp4k';
-import * as game from './game.js?v=mw0pkp4k';
-import * as ui from './ui.js?v=mw0pkp4k';
-import { $ } from './ui.js?v=mw0pkp4k';
-import { api, isRemote } from './remote.js?v=mw0pkp4k';
-import { initTelegram, haptic, hapticDone, shareText, inviteLink } from './telegram.js?v=mw0pkp4k';
+import { CONFIG, CRAFT, AUTO_SELL, BETS, COUNTRIES, OPERATORS, SHOP_ITEMS, TIERS } from './config.js?v=mw0ptf7h';
+import { formatPhone, formatMoney, formatMult } from './generator.js?v=mw0ptf7h';
+import { load, save, fresh, sanitize } from './state.js?v=mw0ptf7h';
+import * as game from './game.js?v=mw0ptf7h';
+import * as ui from './ui.js?v=mw0ptf7h';
+import { $ } from './ui.js?v=mw0ptf7h';
+import { api, isRemote } from './remote.js?v=mw0ptf7h';
+import { initTelegram, haptic, hapticDone, shareText, inviteLink } from './telegram.js?v=mw0ptf7h';
 
 initTelegram();
 // Режим сервера: игру считает Cloudflare Worker, здесь только показ. Без API_URL или вне Telegram играем локально.
@@ -34,12 +34,14 @@ function renderAll() {
   ui.renderCollection(state);
   ui.renderMore(state);
   if (!remote) save(state);
+  else try { localStorage.setItem('simok_cache', JSON.stringify(state)); } catch { /* нет места */ }
 }
 
 async function onSpin() {
   if (busy) return;
   busy = true;
-  $('spinBtn').disabled = true;
+  // анимация идёт сразу, пока сервер считает
+  const anim = ui.animateNumber();
   const out = await act('spin', {}, () => {
     const bailout = game.bailout(state);
     const r = game.spin(state, state.multi);
@@ -48,13 +50,13 @@ async function onSpin() {
   if (out.error) {
     if (out.state) renderAll();
     ui.toast(out.error);
-    busy = false; $('spinBtn').disabled = false;
+    busy = false;
     return;
   }
   const res = out.res;
   if (out.bailout) ui.toast(`Пособие ${formatMoney(CONFIG.BAILOUT)}: крути дальше`);
   haptic('medium');
-  await ui.animateNumber();
+  await anim;
   view = { item: res.item };
   renderAll();
   if (res.item.tier >= 2) hapticDone();
@@ -69,7 +71,6 @@ async function onSpin() {
   if (res.found) notes.push(res.found.done ? `🗺️ Альбом ${OPERATORS.find((o) => o.id === res.found.op).name} собран: +${formatMoney(res.found.bonus)}` : `🗺️ Новый город: ${res.found.city}`);
   if (notes.length) ui.toast(notes.join('\n'));
   busy = false;
-  $('spinBtn').disabled = false;
 }
 
 $('spinBtn').onclick = onSpin;
@@ -251,16 +252,18 @@ $('shopList').onclick = (e) => {
 
 if (remote) {
   // состояние берём с сервера; пока ответа нет, кнопка крутки выключена
-  $('spinBtn').disabled = true;
-  const first = await api('state', state);
+  // одним запросом: берём состояние и сразу пробуем забрать ежедневный бонус
+  busy = true;
+  try { const c = JSON.parse(localStorage.getItem('simok_cache')); if (c?.balance !== undefined) { state = sanitize(c); view = { item: state.pending }; } } catch { /* кэша нет */ }
+  renderAll();
+  const first = await api('daily', state);
   if (first.state) {
     state = first.state;
     view = { item: state.pending };
-    $('spinBtn').disabled = false;
+    busy = false;
   } else ui.toast(first.error || 'Сервер недоступен');
   renderAll();
-  const d = first.state ? await act('daily', {}, null) : null;
-  if (d?.bonus) { renderAll(); ui.toast(`Ежедневный бонус: +${formatMoney(d.bonus.balance)}`); }
+  if (first.bonus) ui.toast(`Ежедневный бонус: +${formatMoney(first.bonus.balance)}`);
 } else {
   const daily = game.claimDaily(state);
   renderAll();

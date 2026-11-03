@@ -83,7 +83,7 @@ export async function runAction(db, userId, action, body, now = Date.now()) {
   return { error: 'Сервер занят, повтори ещё раз', busy: true };
 }
 
-export async function handleApi(request, env, { store, db, now = Date.now() }) {
+export async function handleApi(request, env, { store, db, now = Date.now(), waitUntil }) {
   const cors = corsHeaders(env, request);
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
   const action = new URL(request.url).pathname.replace(/^\/api\//, '');
@@ -100,7 +100,10 @@ export async function handleApi(request, env, { store, db, now = Date.now() }) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) body = {};
 
   const ref = typeof body.ref === 'string' && /^\d{1,15}$/.test(body.ref) ? body.ref : null;
-  await store.touch(who.user, { ref });
+  // запись «был в игре» не задерживает ответ игроку
+  const touching = store.touch(who.user, { ref });
+  if (waitUntil) waitUntil(touching.catch(() => {}));
   const out = await runAction(db, who.user.id, action, body, now);
+  if (!waitUntil) await touching;
   return reply(out, out.busy ? 503 : 200, cors);
 }

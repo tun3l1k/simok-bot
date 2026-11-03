@@ -1,7 +1,7 @@
 // Связь с сервером на Cloudflare. Если API_URL пуст или игра открыта не из Telegram, работает локальный режим.
-import { CONFIG } from './config.js?v=mw0pkp4k';
-import { getInitData } from './telegram.js?v=mw0pkp4k';
-import { pickSettings } from './state.js?v=mw0pkp4k';
+import { CONFIG } from './config.js?v=mw0ptf7h';
+import { getInitData } from './telegram.js?v=mw0ptf7h';
+import { pickSettings } from './state.js?v=mw0ptf7h';
 
 export const isRemote = () => Boolean(CONFIG.API_URL && getInitData());
 
