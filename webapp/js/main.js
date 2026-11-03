@@ -1,11 +1,11 @@
-import { CONFIG, CRAFT, AUTO_SELL, BETS, COUNTRIES, OPERATORS, SHOP_ITEMS, TIERS } from './config.js?v=mw14t2cv';
-import { formatPhone, formatMoney, formatMult } from './generator.js?v=mw14t2cv';
-import { load, save, fresh, sanitize } from './state.js?v=mw14t2cv';
-import * as game from './game.js?v=mw14t2cv';
-import * as ui from './ui.js?v=mw14t2cv';
-import { $ } from './ui.js?v=mw14t2cv';
-import { api, isRemote, net } from './remote.js?v=mw14t2cv';
-import { initTelegram, haptic, hapticDone, shareText, inviteLink } from './telegram.js?v=mw14t2cv';
+import { CONFIG, CRAFT, AUTO_SELL, BETS, COUNTRIES, OPERATORS, SHOP_ITEMS, TIERS } from './config.js?v=mw153tx1';
+import { formatPhone, formatMoney, formatMult } from './generator.js?v=mw153tx1';
+import { load, save, fresh, sanitize } from './state.js?v=mw153tx1';
+import * as game from './game.js?v=mw153tx1';
+import * as ui from './ui.js?v=mw153tx1';
+import { $ } from './ui.js?v=mw153tx1';
+import { api, isRemote, net } from './remote.js?v=mw153tx1';
+import { initTelegram, haptic, hapticDone, shareText, inviteLink } from './telegram.js?v=mw153tx1';
 
 initTelegram();
 // Режим сервера: игру считает Cloudflare Worker, здесь только показ. Без API_URL или вне Telegram играем локально.
@@ -228,7 +228,10 @@ $('craftQuick').onclick = (e) => {
   craftSel = game.craftAutoPick(state, Number(t));
   haptic();
   craftOpen();
+  // показываем выбранные номера: прокрутка к первому из них
+  $('craftList').querySelector('.row.on')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
 };
+$('craftClear').onclick = () => { craftSel = []; haptic(); craftOpen(); };
 $('craftList').onclick = (e) => {
   const id = e.target.closest('[data-craft]')?.dataset.craft;
   const it = state.collection.find((x) => x.id === id);
@@ -239,6 +242,7 @@ $('craftList').onclick = (e) => {
     // 11-й номер не сбрасывает выбор: просто не добавляется
     if (craftSel.length >= CRAFT.COUNT) { ui.toast(`Уже выбрано ${CRAFT.COUNT}. Сними один номер, чтобы выбрать другой`); return; }
     craftSel = [...craftSel, id];
+    if (craftSel.length === CRAFT.COUNT) ui.toast(`✅ Выбрано ${CRAFT.COUNT} номеров: можно сливать`);
   } else craftSel = [id];
   haptic();
   craftOpen();

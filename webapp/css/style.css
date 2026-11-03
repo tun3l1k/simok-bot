@@ -24,6 +24,14 @@ main{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;marg
 .pill.danger{color:#ff7a8a}
 .pill.small{height:36px;padding:0 14px;font-size:13px}
 .pill.go{background:var(--accent);color:#1a0d00}
+.craft-bar{position:sticky;bottom:calc(-1 * max(19px,env(safe-area-inset-bottom)));margin:12px -15px calc(-1 * max(19px,env(safe-area-inset-bottom)));padding:12px 15px max(19px,env(safe-area-inset-bottom));background:#1d1629;border-top:1px solid #3a2f4d;box-shadow:0 -10px 18px #1d1629;z-index:2}
+.craft-prog{display:flex;justify-content:space-between;align-items:center;font-size:16px;margin-bottom:8px}
+.craft-prog .link{background:none;border:0;color:var(--mut);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer}
+.meter{height:8px;border-radius:4px;background:#2f2640;overflow:hidden;margin-bottom:8px}
+.meter i{display:block;height:100%;width:0;background:var(--accent);border-radius:4px;transition:width .15s}
+.meter.full i{background:#4cd27a}
+#craftList .row.on{background:rgba(255,138,26,.2);box-shadow:inset 4px 0 0 var(--accent)}
+#craftList .row.on .row-price{color:var(--accent)}
 .quick{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 10px}
 .quick button{border:0;border-radius:999px;padding:8px 14px;font:inherit;font-size:13px;font-weight:700;color:#fff;background:var(--card);box-shadow:inset 0 0 0 2px var(--tier,#555);cursor:pointer}
 .quick button:active{transform:scale(.97)}

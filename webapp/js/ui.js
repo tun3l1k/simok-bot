@@ -1,7 +1,7 @@
-import { skinOf } from './skins.js?v=mw14t2cv';
-import { CONFIG, CRAFT, TIERS, OPERATORS, AUTO_SELL, BETS, COUNTRIES, SHOP_ITEMS, DIGIT_BONUS, xpForLevel } from './config.js?v=mw14t2cv';
-import { formatPhone, formatMoney, formatMult } from './generator.js?v=mw14t2cv';
-import { collectionValue, currentBet, spinCost, operatorOf, luckBestOf, luckLeft, luck20Left, albumSize, albumFound, craftQuote } from './game.js?v=mw14t2cv';
+import { skinOf } from './skins.js?v=mw153tx1';
+import { CONFIG, CRAFT, TIERS, OPERATORS, AUTO_SELL, BETS, COUNTRIES, SHOP_ITEMS, DIGIT_BONUS, xpForLevel } from './config.js?v=mw153tx1';
+import { formatPhone, formatMoney, formatMult } from './generator.js?v=mw153tx1';
+import { collectionValue, currentBet, spinCost, operatorOf, luckBestOf, luckLeft, luck20Left, albumSize, albumFound, craftQuote } from './game.js?v=mw153tx1';
 
 export const countryOf = (s) => COUNTRIES.find((c) => c.id === s.country) ?? COUNTRIES[0];
 
@@ -264,6 +264,12 @@ export function renderCraft(s, sel) {
   }
   $('craftQuick').innerHTML = quick.join('');
   $('craftQuickLabel').hidden = !quick.length;
+
+  // прогресс выбора виден всегда: счётчик и полоска в нижней панели
+  $('craftCount').textContent = `Выбрано ${picked.length} из ${CRAFT.COUNT}`;
+  $('craftMeter').style.width = `${Math.min(100, picked.length / CRAFT.COUNT * 100)}%`;
+  $('craftMeter').parentElement.classList.toggle('full', picked.length >= CRAFT.COUNT);
+  $('craftClear').hidden = !picked.length;
 
   const go = $('craftGo');
   go.disabled = true;

@@ -20,6 +20,13 @@ export function createStore(db, now = () => Date.now()) {
       await q('UPDATE users SET blocked = ? WHERE id = ?', blocked ? 1 : 0, id).run();
     },
     async get(id) { return q('SELECT * FROM users WHERE id = ?', id).first(); },
+    // игрок по числовому id или @username
+    async findUser(text) {
+      const t = String(text ?? '').trim().replace(/^@/, '');
+      if (/^\d{1,15}$/.test(t)) return q('SELECT * FROM users WHERE id = ?', Number(t)).first();
+      if (!/^[A-Za-z0-9_]{3,32}$/.test(t)) return null;
+      return q('SELECT * FROM users WHERE lower(username) = lower(?)', t).first();
+    },
     async stats() {
       const t = now();
       const r = await q(

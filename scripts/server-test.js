@@ -190,9 +190,9 @@ class Kb { constructor() { this.rows = [[]]; } text(t, d) { this.rows.at(-1).pus
   [11, 12, 13].forEach((id) => as.touch({ id, first_name: 'U' + id }, { started: true }));
   await as.touch({ id: 14, first_name: 'без бота' });
   const handlers = { command: {}, cb: [], on: {} }; const calls = [];
-  const api = { copyMessage: async (...a) => calls.push({ m: 'copy', a }), editMessageText: async (...a) => calls.push({ m: 'apiEdit', a }) };
+  const api = { sendMessage: async (...a) => calls.push({ m: 'dm', a }), copyMessage: async (...a) => calls.push({ m: 'copy', a }), editMessageText: async (...a) => calls.push({ m: 'apiEdit', a }) };
   const bot = { api, command: (n, f) => (handlers.command[n] = f), callbackQuery: (re, f) => handlers.cb.push([re, f]), on: (e, f) => (handlers.on[e] = f) };
-  registerAdmin(bot, as, { adminIds: ['11'], webappUrl: 'https://example.com/', chunk: 2, sleep: async () => {} }, Kb);
+  registerAdmin(bot, as, { adminIds: ['11'], webappUrl: 'https://example.com/', chunk: 2, sleep: async () => {}, db: adb }, Kb);
   const ctxOf = (from, extra = {}) => ({
     from: { id: from }, chat: { id: from },
     reply: async (text, o) => { calls.push({ m: 'reply', text, o }); return { chat: { id: from }, message_id: 500 + calls.length }; },
@@ -214,10 +214,38 @@ class Kb { constructor() { this.rows = [[]]; } text(t, d) { this.rows.at(-1).pus
   await press(11, 'adm:recent'); assert.match(last('edit').text, /Новые игроки/);
   await press(11, 'adm:top'); assert.match(last('edit').text, /Приглашений пока нет/);
 
+  // выдача игроку
+  await press(11, 'adm:give'); assert.match(last('edit').text, /id игрока/);
+  await write(12, '999'); assert.equal(count('next'), 1, 'чужой текст не трогаем');
+  await write(11, '99999'); assert.match(last('reply').text, /Не нашёл/);
+  await write(11, '@nobody'); assert.match(last('reply').text, /Не нашёл/);
+  await write(11, '12'); assert.match(last('reply').text, /Что выдать\?/);
+  await press(11, 'adm:cg:12:100000');
+  assert.match(last('edit').text, /Выдано \+100/);
+  let ps = (await (await import('../server/src/players.js')).loadPlayer(adb, 12)).state;
+  assert.equal(ps.balance, 10000 + 100000, 'валюта выдана');
+  assert.equal(count('dm'), 1, 'игроку пришло уведомление');
+  await press(11, 'adm:coin:12'); await write(11, '-5 000');
+  assert.match(last('reply').text, /Выдано −5/);
+  await write(11, '/admin');
+  await press(11, 'adm:coin:12'); await write(11, 'много'); assert.match(last('reply').text, /Пришли число/);
+  await press(11, 'adm:simg:12:3:x');
+  assert.match(last('edit').text, /Выдана SIM/);
+  ps = (await (await import('../server/src/players.js')).loadPlayer(adb, 12)).state;
+  assert.equal(ps.collection.length, 1); assert.ok(ps.collection[0].tier >= 3, 'редкость не ниже выбранной');
+  await press(11, 'adm:simg:12:2:0');
+  ps = (await (await import('../server/src/players.js')).loadPlayer(adb, 12)).state;
+  assert.equal(ps.collection.length, 2);
+  await press(11, 'adm:lg:12:x20'); await press(11, 'adm:lg:12:x2');
+  ps = (await (await import('../server/src/players.js')).loadPlayer(adb, 12)).state;
+  assert.equal(ps.luck20, 1); assert.equal(ps.luck, 1);
+  await press(12, 'adm:cg:12:5'); assert.ok(last('answer').o.show_alert, 'чужой не может выдавать');
+  await handlers.command.admin(ctxOf(11));
+
   await press(11, 'adm:bc');
   assert.match(last('edit').text, /получат <b>3<\/b>/, 'считаются только те, кто писал боту');
-  await write(12, 'не админ'); assert.equal(count('next'), 1);
-  await write(11, '/start'); assert.equal(count('next'), 2);
+  await write(12, 'не админ'); assert.equal(count('next'), 3);
+  await write(11, '/start'); assert.equal(count('next'), 4);
   await write(11, 'Привет, обновление!');
   assert.match(last('reply').text, /Отправить\?/);
   await press(11, 'adm:bcsend');

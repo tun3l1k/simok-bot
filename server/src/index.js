@@ -29,7 +29,7 @@ function getBot(env) {
     if (st === 'kicked') await store.markBlocked(ctx.chat.id, true);
     else if (st === 'member') await store.markBlocked(ctx.chat.id, false);
   });
-  registerAdmin(bot, store, { adminIds: adminIdsOf(env), webappUrl: env.WEBAPP_URL, chunk: 25 }, InlineKeyboard);
+  registerAdmin(bot, store, { adminIds: adminIdsOf(env), webappUrl: env.WEBAPP_URL, chunk: 25, db: env.DB }, InlineKeyboard);
 
   bot.command('start', (ctx) => {
     const payload = (ctx.match || '').trim();

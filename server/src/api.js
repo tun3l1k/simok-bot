@@ -2,7 +2,8 @@
 // клиент присылает только «что хочу сделать» и свои настройки, а баланс, номера и цены берутся из базы.
 import { verifyInitData } from './auth.js';
 import * as game from './shared/game.js';
-import { fresh, sanitize, applySettings } from './shared/state.js';
+import { fresh, applySettings } from './shared/state.js';
+import { loadOrCreate, savePlayer } from './players.js';
 import { CRAFT } from './shared/config.js';
 
 const MAX_BODY = 8 * 1024;
@@ -21,17 +22,6 @@ export function corsHeaders(env, request) {
 }
 
 const reply = (data, status, cors) => new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', ...cors } });
-
-async function loadPlayer(db, id) {
-  const r = await db.prepare('SELECT state, ver FROM players WHERE id = ?').bind(id).first();
-  return r ? { state: sanitize(JSON.parse(r.state)), ver: r.ver } : null;
-}
-// Запись проходит, только если за это время никто другой не менял игрока (ver совпадает)
-async function savePlayer(db, id, state, ver, now) {
-  const r = await db.prepare('UPDATE players SET state = ?, ver = ver + 1, updated = ? WHERE id = ? AND ver = ?')
-    .bind(JSON.stringify(state), now, id, ver).run();
-  return r.meta.changes === 1;
-}
 
 const ACTIONS = {
   state: () => ({}),
@@ -68,11 +58,7 @@ const ACTIONS = {
 // Читает игрока, применяет действие и пишет обратно. При гонке повторяет с свежими данными.
 export async function runAction(db, userId, action, body, now = Date.now()) {
   for (let attempt = 0; attempt < 4; attempt++) {
-    let rec = await loadPlayer(db, userId);
-    if (!rec) {
-      await db.prepare('INSERT OR IGNORE INTO players (id, state, ver, updated) VALUES (?, ?, 0, ?)').bind(userId, JSON.stringify(fresh()), now).run();
-      rec = await loadPlayer(db, userId);
-    }
+    const rec = await loadOrCreate(db, userId, now);
     const s = rec.state;
     applySettings(s, body.settings);
     const out = ACTIONS[action](s, body, now);

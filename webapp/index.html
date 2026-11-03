@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache">
 <meta name="theme-color" content="#140f1f">
 <title>SimOk</title>
-<link rel="stylesheet" href="css/style.css?v=mw14t2cv">
+<link rel="stylesheet" href="css/style.css?v=mw153tx1">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
@@ -140,8 +140,12 @@
   <p class="muted small left" id="craftQuickLabel" hidden>Быстрый выбор: 10 самых дешёвых нужной редкости</p>
   <div class="quick" id="craftQuick"></div>
   <ul class="list rows" id="craftList"></ul>
-  <p class="muted center small" id="craftQuote"></p>
-  <button class="pill btn wide go" id="craftGo" disabled>Слить</button>
+  <div class="craft-bar">
+    <div class="craft-prog"><b id="craftCount">Выбрано 0 из 10</b><button class="link" id="craftClear" hidden>Сбросить</button></div>
+    <div class="meter"><i id="craftMeter"></i></div>
+    <p class="muted center small" id="craftQuote"></p>
+    <button class="pill btn wide go" id="craftGo" disabled>Слить</button>
+  </div>
 </dialog>
 
 <dialog id="luckSheet" class="sheet">
@@ -170,6 +174,6 @@
 </dialog>
 <div class="toast" id="toast" role="status"></div>
 
-<script type="module" src="js/main.js?v=mw14t2cv"></script>
+<script type="module" src="js/main.js?v=mw153tx1"></script>
 </body>
 </html>
