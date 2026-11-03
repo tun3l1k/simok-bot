@@ -5,11 +5,14 @@ import * as game from '../webapp/js/game.js';
 import { CONFIG, BETS, TIERS, OPERATORS, CRAFT } from '../webapp/js/config.js';
 import { SERIES, detectSeries, roll, rollMin, digitBonus, oddsOf } from '../webapp/js/generator.js';
 
+// Открытые города дают награды; в тестах денег и цен заранее открываем всё, чтобы они не мешали подсчёту
+import { CITIES } from '../webapp/js/config.js';
+const openAll = (t) => { for (const o of OPERATORS) t.found[o.id] = CITIES.map((c) => c.name); return t; };
 const s = fresh();
 const start = s.balance;
 let r = game.spin(s, 1);
 assert.ok(r.item && s.pending, 'после крутки есть номер');
-assert.ok(s.balance === start - 500 || r.levelUps.length, 'деньги списались');
+assert.ok(s.balance === start - 500 + (r.found ? r.found.cityBonus + r.found.bonus : 0) || r.levelUps.length || r.soldNow || r.found, 'деньги списались');
 r = game.spin(s, 1);
 assert.ok(s.collection.length === 1 || r.soldNow, 'прошлый номер ушёл в коллекцию сам');
 const id = s.collection[0]?.id;
@@ -23,7 +26,7 @@ assert.ok(game.claimDaily(s) !== null && game.claimDaily(s) === null, 'ежед�
 // ставки с гарантией редкости
 BETS.forEach((b, i) => {
   if (!b.tier) return;
-  const t = fresh();
+  const t = openAll(fresh());
   t.bet = i; t.balance = b.cost * 2; t.luck = 5;
   const r2 = game.spin(t, 1);
   assert.ok(!r2.error, `ставка ${i}: хватает денег`);
@@ -70,7 +73,7 @@ assert.equal(oddsOf(null), null);
 // слияние: 10 номеров одной редкости → номер редкостью выше
 {
   const N = CRAFT.COUNT;
-  const t = fresh(); t.balance = 1e6;
+  const t = openAll(fresh()); t.balance = 1e6;
   const mk = (tier) => { let it; do { it = roll(); } while (it.tier !== tier); return it; };
   const many = (tier, n = N) => Array.from({ length: n }, () => mk(tier));
   const group = many(1);
@@ -132,7 +135,7 @@ console.log('Все проверки пройдены');
 }
 // Продажа выпавшего номера
 {
-  const t = fresh(); const b0 = t.balance;
+  const t = openAll(fresh()); const b0 = t.balance;
   const r = game.spin(t, 1); const after = t.balance;
   if (!r.soldNow) {
     assert.equal(game.sellPending(t), r.item.price, 'продали по цене номера');
@@ -198,3 +201,27 @@ console.log('Коллекция 50 и автопродажа: ок');
   assert.equal(bonusGot, CONFIG.ALBUM_BONUS, 'награда за полный альбом');
 }
 console.log('Удача x20 и альбом: ок');
+// Атлас: награда за город, округ и всю Россию
+{
+  const { DISTRICTS, ATLAS, CITIES, CITY_BY_NAME } = await import('../webapp/js/config.js');
+  assert.equal(CITIES.length, 82);
+  const t = fresh(); const b0 = t.balance;
+  let f = game.discover(t, { op: 'mgs', city: 'Москва' });
+  assert.ok(f.isNewCity && f.cityBonus === CITY_BY_NAME['Москва'].bonus && f.district.count === 1);
+  assert.equal(t.balance, b0 + f.cityBonus);
+  const f2 = game.discover(t, { op: 'yoga', city: 'Москва' });
+  assert.ok(!f2.isNewCity && f2.cityBonus === 0, 'штамп второго оператора города не оплачивается повторно');
+  assert.equal(game.discover(t, { op: 'mgs', city: 'Москва' }), null, 'повтор ничего не даёт');
+  let last, luckBefore = t.luck;
+  for (const d of DISTRICTS) {
+    for (const c of d.cities) { const r = game.discover(t, { op: 'mgs', city: c }); if (r?.district?.done) last = r; }
+    assert.ok(t.atlas.claimed.includes(d.id), `округ ${d.id} засчитан`);
+  }
+  assert.equal(t.luck - luckBefore, DISTRICTS.length * ATLAS.DISTRICT_REWARD.luck, 'за каждый округ заряд Удачи');
+  assert.equal(t.luck20, ATLAS.ALL_REWARD.luck20, 'вся Россия даёт заряд x20');
+  assert.ok(t.atlas.claimed.includes('all') && last.all, 'награда за всю Россию выдана один раз');
+  const total = CITIES.reduce((a, c) => a + c.bonus, 0) + DISTRICTS.length * ATLAS.DISTRICT_REWARD.balance + ATLAS.ALL_REWARD.balance;
+  const album = game.albumFound(t, 'mgs') === game.albumSize('mgs') ? CONFIG.ALBUM_BONUS : 0; // у МГС есть все 82 города
+  assert.equal(t.balance, b0 + total + album, 'сумма наград сходится');
+  console.log(`Атлас: ок (все награды вместе ${total.toLocaleString('ru-RU')} ₽)`);
+}

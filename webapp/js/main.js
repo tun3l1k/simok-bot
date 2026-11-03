@@ -1,11 +1,11 @@
-import { CONFIG, CRAFT, AUTO_SELL, BETS, COUNTRIES, OPERATORS, SHOP_ITEMS, TIERS } from './config.js?v=mw153tx1';
-import { formatPhone, formatMoney, formatMult } from './generator.js?v=mw153tx1';
-import { load, save, fresh, sanitize } from './state.js?v=mw153tx1';
-import * as game from './game.js?v=mw153tx1';
-import * as ui from './ui.js?v=mw153tx1';
-import { $ } from './ui.js?v=mw153tx1';
-import { api, isRemote, net } from './remote.js?v=mw153tx1';
-import { initTelegram, haptic, hapticDone, shareText, inviteLink } from './telegram.js?v=mw153tx1';
+import { CONFIG, CRAFT, AUTO_SELL, BETS, COUNTRIES, OPERATORS, SHOP_ITEMS, TIERS } from './config.js?v=mw15a2uk';
+import { formatPhone, formatMoney, formatMult } from './generator.js?v=mw15a2uk';
+import { load, save, fresh, sanitize } from './state.js?v=mw15a2uk';
+import * as game from './game.js?v=mw15a2uk';
+import * as ui from './ui.js?v=mw15a2uk';
+import { $ } from './ui.js?v=mw15a2uk';
+import { api, isRemote, net } from './remote.js?v=mw15a2uk';
+import { initTelegram, haptic, hapticDone, shareText, inviteLink } from './telegram.js?v=mw15a2uk';
 
 initTelegram();
 // Режим сервера: игру считает Cloudflare Worker, здесь только показ. Без API_URL или вне Telegram играем локально.
@@ -56,6 +56,16 @@ function renderAll() {
   else try { localStorage.setItem('simok_cache', JSON.stringify(state)); } catch { /* нет места */ }
 }
 
+// Новый город показывает карточку, штамп оператора и собранный альбом идут строками в уведомлении
+function foundNotes(f) {
+  if (!f) return [];
+  const notes = [];
+  if (f.isNewCity && f.district) ui.showDiscovery(f);
+  else notes.push(`🔖 Штамп ${OPERATORS.find((o) => o.id === f.op)?.name}: ${f.city}`);
+  if (f.done) notes.push(`📖 Альбом ${OPERATORS.find((o) => o.id === f.op).name} собран: +${formatMoney(f.bonus)}`);
+  return notes;
+}
+
 async function onSpin() {
   if (busy) return;
   busy = true;
@@ -88,7 +98,7 @@ async function onSpin() {
   res.levelUps.forEach((l) => notes.push(`Уровень ${l.level}: +${formatMoney(l.balance)}`));
   if (res.luck20Earned) notes.push(`🍀 Удача x${CONFIG.LUCK20_BEST_OF} готова: следующая крутка выберет лучший из ${CONFIG.LUCK20_BEST_OF}`);
   else if (res.luckEarned) notes.push('🍀 Удача x2 готова: следующая крутка выберет лучший из двух');
-  if (res.found) notes.push(res.found.done ? `🗺️ Альбом ${OPERATORS.find((o) => o.id === res.found.op).name} собран: +${formatMoney(res.found.bonus)}` : `🗺️ Новый город: ${res.found.city}`);
+  notes.push(...foundNotes(res.found));
   if (notes.length) ui.toast(notes.join('\n'));
   busy = false;
 }
@@ -258,7 +268,9 @@ $('craftGo').onclick = async () => {
   hapticDone();
   renderAll();
   $('craftSheet').close();
-  if (res.upgraded) ui.toast(`🎉 Повезло: выпала редкость «${TIERS[res.item.tier].name}»`);
+  const fn = foundNotes(res.found);
+  if (res.upgraded) ui.toast([`🎉 Повезло: выпала редкость «${TIERS[res.item.tier].name}»`, ...fn].join('\n'));
+  else if (fn.length) ui.toast(fn.join('\n'));
   openDetail(res.item, 'Слияние');
 };
 
@@ -282,6 +294,21 @@ $('resetBtn').onclick = async () => {
 };
 
 // Магазин: пока заглушка
+// Атлас
+let atlasD = 'cfo', atlasCity = null;
+const atlasRender = () => ui.renderAtlas(state, atlasD, atlasCity);
+$('atlasBtn').onclick = () => { atlasCity = null; atlasRender(); $('atlasSheet').showModal(); };
+$('atlasClose').onclick = () => $('atlasSheet').close();
+$('atlasTabs').onclick = (e) => {
+  const d = e.target.closest('[data-district]')?.dataset.district;
+  if (d) { atlasD = d; atlasCity = null; haptic(); atlasRender(); }
+};
+$('atlasGrid').onclick = (e) => {
+  const c = e.target.closest('[data-city]')?.dataset.city;
+  if (c) { atlasCity = c; haptic(); atlasRender(); }
+};
+$('discoverPop').onclick = () => $('discoverPop').close();
+
 $('settingsBtn').onclick = () => {
   $('netInfo').textContent = remote ? (net.rtt === null ? 'Связь с сервером: ещё не было запросов' : `Связь с сервером: ${net.rtt} мс (сервер считал ${net.server ?? '?'} мс)`) : 'Играешь без сервера';
   $('settingsSheet').showModal();

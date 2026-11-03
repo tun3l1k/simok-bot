@@ -1,7 +1,7 @@
-import { skinOf } from './skins.js?v=mw153tx1';
-import { CONFIG, CRAFT, TIERS, OPERATORS, AUTO_SELL, BETS, COUNTRIES, SHOP_ITEMS, DIGIT_BONUS, xpForLevel } from './config.js?v=mw153tx1';
-import { formatPhone, formatMoney, formatMult } from './generator.js?v=mw153tx1';
-import { collectionValue, currentBet, spinCost, operatorOf, luckBestOf, luckLeft, luck20Left, albumSize, albumFound, craftQuote } from './game.js?v=mw153tx1';
+import { skinOf } from './skins.js?v=mw15a2uk';
+import { CONFIG, CRAFT, TIERS, OPERATORS, AUTO_SELL, BETS, COUNTRIES, SHOP_ITEMS, DIGIT_BONUS, DISTRICTS, CITIES, CITY_BY_NAME, ATLAS, rankOf, xpForLevel } from './config.js?v=mw15a2uk';
+import { formatPhone, formatMoney, formatMult } from './generator.js?v=mw15a2uk';
+import { collectionValue, currentBet, spinCost, operatorOf, luckBestOf, luckLeft, luck20Left, albumSize, albumFound, craftQuote, citiesOpened, districtProgress } from './game.js?v=mw15a2uk';
 
 export const countryOf = (s) => COUNTRIES.find((c) => c.id === s.country) ?? COUNTRIES[0];
 
@@ -127,8 +127,8 @@ export function renderCollection(s) {
     : `<li class="empty">Пока пусто. Номера попадают сюда сами, когда крутишь дальше (до ${CONFIG.COLLECTION_MAX} шт.).</li>`;
 }
 
-const totalFound = (s) => OPERATORS.reduce((a, o) => a + albumFound(s, o.id), 0);
-const totalCities = () => OPERATORS.reduce((a, o) => a + albumSize(o.id), 0);
+const totalFound = (s) => citiesOpened(s).size;
+const totalCities = () => CITIES.length;
 
 // Окошко «Гарант удачи»: два счётчика и готовые заряды
 export function renderLuckSheet(s) {
@@ -160,6 +160,7 @@ export function renderMore(s) {
     stat('📱', `${s.collection.length}/${CONFIG.COLLECTION_MAX}`, 'в коллекции') +
     stat('💰', formatMoney(collectionValue(s)), 'цена коллекции') +
     stat('🗺️', `${totalFound(s)}/${totalCities()}`, 'городов открыто');
+  $('atlasSub').textContent = `${totalFound(s)} из ${totalCities()} · ${rankOf(totalFound(s)).name}`;
   const d = CONFIG.DAILY_BONUS;
   const wait = s.lastDaily + d.cooldownH * 3600e3 - Date.now();
   $('dailySub').textContent = wait > 0 ? `Через ${Math.ceil(wait / 3600e3)} ч` : `Забери ${formatMoney(d.balance)}`;
@@ -287,4 +288,61 @@ export function renderCraft(s, sel) {
     + (q.lossy ? '<br>⚠️ Выше этой редкости ничего нет: выгоднее продать номера' : '');
   go.disabled = !enough;
   go.textContent = q.fee ? `Слить · доплата ${formatMoney(q.fee)}` : 'Слить';
+}
+
+// ---------- Атлас России ----------
+const escH = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const opName = (id) => OPERATORS.find((o) => o.id === id)?.name ?? id;
+const oneIn = (p) => `1 из ${Math.max(1, Math.round(1 / p)).toLocaleString('ru-RU')}`;
+
+export function renderAtlas(s, districtId, cityName) {
+  const opened = citiesOpened(s);
+  const n = opened.size;
+  const rank = rankOf(n);
+  const next = ATLAS.RANKS.find((r) => r.from > n);
+  $('atlasHead').innerHTML = `<div class="at-rank"><b>${rank.name}</b><span>${n} из ${CITIES.length} городов</span></div>
+    <div class="meter"><i style="width:${(n / CITIES.length) * 100}%"></i></div>
+    <small>${next ? `До звания «${next.name}»: ${next.from - n}` : 'Вся Россия открыта'} · за каждый округ ${formatMoney(ATLAS.DISTRICT_REWARD.balance)} и 🍀, за всю Россию ${formatMoney(ATLAS.ALL_REWARD.balance)} и 🍀 x${CONFIG.LUCK20_BEST_OF}</small>`;
+
+  $('atlasTabs').innerHTML = DISTRICTS.map((d) => {
+    const p = districtProgress(s, d, opened);
+    return `<button class="d-tab${d.id === districtId ? ' on' : ''}${p.count === p.total ? ' full' : ''}" data-district="${d.id}"><b>${d.short}</b><small>${p.count}/${p.total}</small></button>`;
+  }).join('');
+
+  const d = DISTRICTS.find((x) => x.id === districtId) ?? DISTRICTS[0];
+  const p = districtProgress(s, d, opened);
+  const claimed = s.atlas?.claimed?.includes(d.id);
+  $('atlasDistrict').innerHTML = `<b>${d.name} округ</b><span>${p.count} из ${p.total}${claimed ? ' · награда получена ✓' : ''}</span>`;
+  $('atlasGrid').innerHTML = CITIES.filter((c) => c.district === d.id).map((c) => {
+    const open = opened.has(c.name);
+    const dots = OPERATORS.map((o) => `<i class="${(s.found?.[o.id] ?? []).includes(c.name) ? 'on' : ''}" style="--c:${o.c[2]}"></i>`).join('');
+    return `<button class="atlas-city${open ? ' open' : ''}${c.name === cityName ? ' cur' : ''}" data-city="${escH(c.name)}"><b>${open ? '' : '🔒 '}${escH(c.name)}</b><span class="dots">${dots}</span></button>`;
+  }).join('');
+
+  const c = CITY_BY_NAME[cityName];
+  if (!c) { $('atlasInfo').innerHTML = '<p class="muted center small">Нажми на город: покажу, как его открыть. Точки под названием — штампы операторов.</p>'; return; }
+  const open = opened.has(c.name);
+  const rows = c.ops.map((o, i) => {
+    const has = (s.found?.[o.id] ?? []).includes(c.name);
+    return `<li class="${has ? 'has' : ''}"><span>${has ? '✓' : ''} ${opName(o.id)}</span><b>${oneIn(o.chance)} круток</b></li>${i === 0 && !open ? '<li class="best"><small>Лучший шанс. Выбери этого оператора в шторке страны.</small></li>' : ''}`;
+  }).join('');
+  const missing = OPERATORS.filter((o) => !c.ops.some((x) => x.id === o.id)).map((o) => o.name);
+  $('atlasInfo').innerHTML = `<div class="ci-head"><b>${escH(c.name)}</b><span>${open ? 'Открыт' : `Награда за открытие ${formatMoney(c.bonus)}`}</span></div>
+    <ul class="ci-ops">${rows}</ul>${missing.length ? `<small class="muted">У ${missing.join(', ')} этого города нет</small>` : ''}`;
+}
+
+// Всплывающая карточка «Новый город»
+let popTimer;
+export function showDiscovery(f) {
+  const d = f.district;
+  const lines = [`<div class="pop-city">${escH(f.city)}</div>`, `<div class="pop-sub">${d.short} · ${d.count} из ${d.total}</div>`,
+    `<div class="meter${d.done ? ' full' : ''}"><i style="width:${(d.count / d.total) * 100}%"></i></div>`,
+    `<div class="pop-gain">+${formatMoney(f.cityBonus)}</div>`];
+  if (d.done) lines.push(`<div class="pop-big">🏆 ${d.name} округ собран!<br>+${formatMoney(d.bonus)} и 🍀 Удача x2</div>`);
+  if (f.all) lines.push(`<div class="pop-big">🇷🇺 Вся Россия открыта!<br>+${formatMoney(f.all.bonus)} и 🍀 Удача x${CONFIG.LUCK20_BEST_OF}</div>`);
+  $('popBody').innerHTML = `<div class="pop-title">🗺️ Новый город!</div>${lines.join('')}`;
+  const el = $('discoverPop');
+  if (!el.open) el.show();
+  clearTimeout(popTimer);
+  popTimer = setTimeout(() => el.close(), d.done || f.all ? 4200 : 2600);
 }

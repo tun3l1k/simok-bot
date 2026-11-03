@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache">
 <meta name="theme-color" content="#140f1f">
 <title>SimOk</title>
-<link rel="stylesheet" href="css/style.css?v=mw153tx1">
+<link rel="stylesheet" href="css/style.css?v=mw15a2uk">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
@@ -78,6 +78,7 @@
       <div class="stats" id="statsGrid"></div>
       <div class="menu">
         <button class="menu-item" id="dailyBtn"><span class="mi-ic gift" aria-hidden="true">🎁</span><span class="mi-t"><b>Ежедневный бонус</b><small id="dailySub"></small></span><i class="mi-go" aria-hidden="true">›</i></button>
+        <button class="menu-item" id="atlasBtn"><span class="mi-ic gift" aria-hidden="true">🗺️</span><span class="mi-t"><b>Атлас России</b><small id="atlasSub"></small></span><i class="mi-go" aria-hidden="true">›</i></button>
         <button class="menu-item" id="settingsBtn"><span class="mi-ic gear" aria-hidden="true">⚙️</span><span class="mi-t"><b>Настройки</b><small id="settingsSub"></small></span><i class="mi-go" aria-hidden="true">›</i></button>
         <button class="menu-item" id="inviteBtn2"><span class="mi-ic friends" aria-hidden="true">👥</span><span class="mi-t"><b>Пригласить друга</b><small>Отправь ссылку на игру</small></span><i class="mi-go" aria-hidden="true">›</i></button>
       </div>
@@ -109,6 +110,19 @@
   <ul class="list" id="shopList"></ul>
   <button class="pill btn wide" id="shopClose">Закрыть</button>
 </dialog>
+
+<dialog id="atlasSheet" class="sheet">
+  <div class="grab"></div>
+  <h2>Атлас России</h2>
+  <div class="atlas-head" id="atlasHead"></div>
+  <div class="d-tabs" id="atlasTabs"></div>
+  <div class="at-district" id="atlasDistrict"></div>
+  <div class="city-info" id="atlasInfo"></div>
+  <div class="city-grid" id="atlasGrid"></div>
+  <button class="pill btn wide" id="atlasClose">Закрыть</button>
+</dialog>
+
+<dialog id="discoverPop" class="pop"><div id="popBody"></div></dialog>
 
 <dialog id="settingsSheet" class="sheet">
   <div class="grab"></div>
@@ -174,6 +188,6 @@
 </dialog>
 <div class="toast" id="toast" role="status"></div>
 
-<script type="module" src="js/main.js?v=mw153tx1"></script>
+<script type="module" src="js/main.js?v=mw15a2uk"></script>
 </body>
 </html>

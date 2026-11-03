@@ -1,6 +1,6 @@
 // Все числа экономики и контента живут здесь. Меняй и проверяй: npm run sim
-import { FLAGS } from './flags.js?v=mw153tx1';
-import { REGISTRY } from './registry.js?v=mw153tx1';
+import { FLAGS } from './flags.js?v=mw15a2uk';
+import { REGISTRY } from './registry.js?v=mw15a2uk';
 
 export const CONFIG = {
   SAVE_KEY: 'simok_save_v1',
@@ -166,3 +166,55 @@ export const SHOP_ITEMS = [
   { title: 'Мешок денег', desc: '+25 000 ₽', stars: 100 },
   { title: 'Стартовый набор', desc: '+60 000 ₽ и +50 Удачи', stars: 250 },
 ];
+
+// ---------- Атлас России ----------
+// Города собраны в 8 федеральных округов. Первое открытие города (у любого оператора) даёт награду по его редкости,
+// собранный округ даёт награду и заряд Удачи, вся Россия большой приз. Штампы операторов в городе ведут свой альбом.
+export const DISTRICTS = [
+  { id: 'cfo', name: 'Центральный', short: 'ЦФО', cities: ['Москва', 'Подмосковье', 'Тверь', 'Ярославль', 'Белгород', 'Воронеж', 'Курск', 'Липецк', 'Орёл', 'Иваново', 'Кострома', 'Смоленск', 'Тамбов', 'Рязань', 'Владимир', 'Тула', 'Калуга', 'Брянск'] },
+  { id: 'szfo', name: 'Северо-Западный', short: 'СЗФО', cities: ['Санкт-Петербург', 'Ленобласть', 'Вологда', 'Архангельск', 'Сыктывкар', 'Петрозаводск', 'Псков', 'Мурманск', 'Великий Новгород', 'Калининград'] },
+  { id: 'yfo', name: 'Южный', short: 'ЮФО', cities: ['Краснодар', 'Ростов-на-Дону', 'Волгоград', 'Майкоп', 'Элиста', 'Астрахань'] },
+  { id: 'skfo', name: 'Северо-Кавказский', short: 'СКФО', cities: ['Ставрополь', 'Махачкала', 'Грозный', 'Черкесск', 'Нальчик', 'Владикавказ', 'Магас'] },
+  { id: 'pfo', name: 'Приволжский', short: 'ПФО', cities: ['Саратов', 'Нижний Новгород', 'Самара', 'Уфа', 'Киров', 'Казань', 'Пермь', 'Йошкар-Ола', 'Оренбург', 'Пенза', 'Ижевск', 'Ульяновск', 'Чебоксары', 'Саранск'] },
+  { id: 'ufo', name: 'Уральский', short: 'УФО', cities: ['Екатеринбург', 'Челябинск', 'Ханты-Мансийск', 'Салехард', 'Тюмень', 'Курган'] },
+  { id: 'sfo', name: 'Сибирский', short: 'СФО', cities: ['Новосибирск', 'Красноярск', 'Кемерово', 'Барнаул', 'Иркутск', 'Горно-Алтайск', 'Омск', 'Томск', 'Кызыл', 'Абакан'] },
+  { id: 'dfo', name: 'Дальневосточный', short: 'ДФО', cities: ['Хабаровск', 'Владивосток', 'Петропавловск-Камч.', 'Биробиджан', 'Южно-Сахалинск', 'Чита', 'Якутск', 'Благовещенск', 'Анадырь', 'Магадан', 'Улан-Удэ'] },
+];
+
+export const ATLAS = {
+  DISTRICT_REWARD: { balance: 25000, luck: 1 },   // округ собран: деньги и один заряд Удачи x2
+  ALL_REWARD: { balance: 500000, luck20: 1 },     // вся Россия: деньги и заряд Удачи x20
+  RANKS: [
+    { from: 0, name: 'Новичок' }, { from: 5, name: 'Турист' }, { from: 15, name: 'Путешественник' },
+    { from: 30, name: 'Следопыт' }, { from: 50, name: 'Картограф' }, { from: 70, name: 'Географ' }, { from: 82, name: 'Легенда России' },
+  ],
+};
+// Награда за первое открытие города: чем он реже выпадает, тем больше
+const cityBonus = (share) => (share >= 0.03 ? 500 : share >= 0.01 ? 1000 : share >= 0.003 ? 3000 : share >= 0.001 ? 8000 : 20000);
+
+// Все города: округ, награда и шанс выпасть у каждого оператора (на одну крутку, если выбран этот оператор)
+export const CITIES = (() => {
+  const info = new Map();
+  for (const o of OPERATORS) {
+    const total = o.codes.reduce((a, c) => a + c.w, 0);
+    for (const c of o.codes) {
+      const e = info.get(c.city) ?? { share: 0, ops: {} };
+      e.share += c.w / total / OPERATORS.length;
+      e.ops[o.id] = (e.ops[o.id] ?? 0) + c.w / total;
+      info.set(c.city, e);
+    }
+  }
+  const list = [];
+  for (const d of DISTRICTS) {
+    for (const name of d.cities) {
+      const e = info.get(name);
+      if (!e) throw new Error(`Города «${name}» нет в реестре`);
+      list.push({ name, district: d.id, bonus: cityBonus(e.share), share: e.share,
+        ops: Object.entries(e.ops).map(([id, chance]) => ({ id, chance })).sort((a, b) => b.chance - a.chance) });
+    }
+  }
+  if (list.length !== info.size) throw new Error('Не все города входят в округа');
+  return list;
+})();
+export const CITY_BY_NAME = Object.fromEntries(CITIES.map((c) => [c.name, c]));
+export const rankOf = (count) => [...ATLAS.RANKS].reverse().find((r) => count >= r.from);

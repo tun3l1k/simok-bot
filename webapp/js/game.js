@@ -1,5 +1,5 @@
-import { CONFIG, AUTO_SELL, BETS, OPERATORS, CRAFT, xpForLevel, levelReward } from './config.js?v=mw153tx1';
-import { roll, rollMin } from './generator.js?v=mw153tx1';
+import { CONFIG, AUTO_SELL, BETS, OPERATORS, CRAFT, DISTRICTS, ATLAS, CITY_BY_NAME, xpForLevel, levelReward } from './config.js?v=mw15a2uk';
+import { roll, rollMin } from './generator.js?v=mw15a2uk';
 
 export const currentBet = (s) => BETS[s.bet] ?? BETS[0];
 export const spinCost = (s, count = s.multi) => currentBet(s).cost * count;
@@ -13,13 +13,40 @@ export const luck20Left = (s) => CONFIG.LUCK20_EVERY - (s.luck20Spins % CONFIG.L
 // Альбом городов: у каждого оператора свой набор, за полный набор есть награда
 export const albumSize = (opId) => new Set(OPERATORS.find((o) => o.id === opId).codes.map((c) => c.city)).size;
 export const albumFound = (s, opId) => (s.found?.[opId] ?? []).length;
-function discover(s, item) {
+export const citiesOpened = (s) => new Set(Object.values(s.found ?? {}).flat());
+export const districtProgress = (s, d, opened = citiesOpened(s)) => ({ count: d.cities.filter((c) => opened.has(c)).length, total: d.cities.length });
+
+// Новый штамп оператора в городе. Если город открыт впервые, платят награду за город, за округ и за всю Россию.
+export function discover(s, item) {
   const list = (s.found[item.op] ??= []);
   if (list.includes(item.city)) return null;
+  const wasOpen = citiesOpened(s).has(item.city);
   list.push(item.city);
-  const done = list.length === albumSize(item.op);
-  if (done) s.balance += CONFIG.ALBUM_BONUS;
-  return { city: item.city, op: item.op, done, bonus: done ? CONFIG.ALBUM_BONUS : 0 };
+  const res = { city: item.city, op: item.op, done: false, bonus: 0, isNewCity: !wasOpen, cityBonus: 0, district: null, all: null };
+  if (list.length === albumSize(item.op)) { res.done = true; res.bonus = CONFIG.ALBUM_BONUS; s.balance += CONFIG.ALBUM_BONUS; }
+  if (!wasOpen) {
+    const city = CITY_BY_NAME[item.city];
+    res.cityBonus = city.bonus;
+    s.balance += city.bonus;
+    const d = DISTRICTS.find((x) => x.id === city.district);
+    const opened = citiesOpened(s);
+    const { count, total } = districtProgress(s, d, opened);
+    s.atlas ??= { claimed: [] };
+    res.district = { id: d.id, name: d.name, short: d.short, count, total, done: false, bonus: 0, luck: 0 };
+    if (count === total && !s.atlas.claimed.includes(d.id)) {
+      s.atlas.claimed.push(d.id);
+      s.balance += ATLAS.DISTRICT_REWARD.balance;
+      s.luck += ATLAS.DISTRICT_REWARD.luck;
+      Object.assign(res.district, { done: true, bonus: ATLAS.DISTRICT_REWARD.balance, luck: ATLAS.DISTRICT_REWARD.luck });
+      if (DISTRICTS.every((x) => s.atlas.claimed.includes(x.id)) && !s.atlas.claimed.includes('all')) {
+        s.atlas.claimed.push('all');
+        s.balance += ATLAS.ALL_REWARD.balance;
+        s.luck20 += ATLAS.ALL_REWARD.luck20;
+        res.all = { bonus: ATLAS.ALL_REWARD.balance, luck20: ATLAS.ALL_REWARD.luck20 };
+      }
+    }
+  }
+  return res;
 }
 // Параметры генерации номера из настроек игрока: оператор тарифа и любимая цифра
 export const rollOpts = (s) => ({ op: s.operator ?? undefined, digit: s.digit ?? undefined });

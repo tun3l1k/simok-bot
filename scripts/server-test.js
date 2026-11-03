@@ -73,13 +73,15 @@ assert.equal((await store.get(1001)).started, 0, 'зашёл по игре, но
 // крутка считается на сервере
 r = await call('spin');
 assert.ok(r.res.item && r.state.pending, 'после крутки есть номер');
-assert.equal(r.state.balance, CONFIG.START_BALANCE - CONFIG.SPIN_COST, 'списана цена крутки');
+const bonus = (r.res.found?.cityBonus ?? 0) + (r.res.found?.bonus ?? 0) + r.res.levelUps.reduce((a, l) => a + l.balance, 0) + (r.res.soldNow ? r.res.item.price : 0);
+assert.equal(r.state.balance, CONFIG.START_BALANCE - CONFIG.SPIN_COST + bonus, 'списана цена крутки');
+const afterSpin = r.state.balance;
 const pendingId = r.state.pending.id;
 assert.equal((await call('state')).state.pending.id, pendingId, 'состояние лежит в базе');
 
 // подделка: чужие поля и неверные настройки не принимаются
 r = await call('state', { balance: 1e9, collection: [1], settings: { bet: 999, multi: 1000, operator: 'evil', digit: 77, autoSell: 9, country: 'xx', balance: 5 } });
-assert.equal(r.state.balance, CONFIG.START_BALANCE - CONFIG.SPIN_COST, 'баланс клиент не задаёт');
+assert.equal(r.state.balance, afterSpin, 'баланс клиент не задаёт');
 assert.equal(r.state.bet, 0); assert.equal(r.state.multi, 1); assert.equal(r.state.operator, null); assert.equal(r.state.digit, null);
 assert.equal(r.state.collection.length, 0);
 r = await call('state', { settings: { bet: 2, multi: 5, operator: 'yoga', digit: 7, autoSell: 1, country: 'ru' } });

@@ -1,4 +1,4 @@
-import { CONFIG, AUTO_SELL, BETS, COUNTRIES, OPERATORS } from './config.js?v=mw153tx1';
+import { CONFIG, AUTO_SELL, BETS, COUNTRIES, OPERATORS } from './config.js?v=mw15a2uk';
 
 export const fresh = () => ({
   v: 1,
@@ -8,6 +8,7 @@ export const fresh = () => ({
   luck20: 0,               // готовые большие заряды (одна крутка «лучший из 20»)
   luck20Spins: 0,          // крутки до большого заряда (0–499)
   found: {},               // открытые города по операторам: { mgs: ['Москва', …] }
+  atlas: { claimed: [] },  // собранные округа, за которые награда уже выдана (и 'all' за всю Россию)
   level: 1,
   xp: 0,
   collection: [],
@@ -35,6 +36,7 @@ export function sanitize(raw) {
   if (!Number.isInteger(s.luckSpins) || s.luckSpins < 0) s.luckSpins = 0;
   for (const k of ['luck20', 'luck20Spins']) if (!Number.isInteger(s[k]) || s[k] < 0) s[k] = 0;
   if (!s.found || typeof s.found !== 'object' || Array.isArray(s.found)) s.found = {};
+  s.atlas = { claimed: Array.isArray(s.atlas?.claimed) ? s.atlas.claimed.filter((x) => typeof x === 'string').slice(0, 20) : [] };
   if (s.operator && !OPERATORS.some((o) => o.id === s.operator)) s.operator = null;
   if (!Number.isInteger(s.digit) || s.digit < 0 || s.digit > 9) s.digit = null;
   if (!CONFIG.MULTI_OPTIONS.includes(s.multi)) s.multi = 1;
