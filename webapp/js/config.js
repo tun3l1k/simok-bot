@@ -1,6 +1,6 @@
 // Все числа экономики и контента живут здесь. Меняй и проверяй: npm run sim
-import { FLAGS } from './flags.js?v=mw1nrftu';
-import { REGISTRY } from './registry.js?v=mw1nrftu';
+import { FLAGS } from './flags.js?v=mw2mfvzf';
+import { REGISTRY } from './registry.js?v=mw2mfvzf';
 
 export const CONFIG = {
   SAVE_KEY: 'simok_save_v1',
@@ -22,6 +22,10 @@ export const CONFIG = {
   XP_PER_SPIN: 10,
   BAILOUT: 2000,              // пособие, если денег нет и продавать нечего
   DAILY_BONUS: { balance: 2000, cooldownH: 20 },
+  // Приглашения: награда обоим, когда друг прокрутил SPINS раз
+  REF: { SPINS: 10, INVITEE: 10000, INVITER: 10000, LUCK: 1 },
+  // Рынок: цена лота от 100% до 300% стоимости номера, комиссия с продавца
+  MARKET: { FEE: 0.05, MIN_MULT: 1, MAX_MULT: 3, MAX_LISTINGS: 5, PAGE: 20 },
 };
 
 export const xpForLevel = (lvl) => 100 + 60 * (lvl - 1);

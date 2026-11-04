@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache">
 <meta name="theme-color" content="#140f1f">
 <title>SimOk</title>
-<link rel="stylesheet" href="css/style.css?v=mw1nrftu">
+<link rel="stylesheet" href="css/style.css?v=mw2mfvzf">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
@@ -62,14 +62,19 @@
     </section>
 
     <section id="view-market" class="panel" data-view hidden>
-      <h2>Рынок</h2>
-      <p class="muted">Скоро: продажа и обмен номерами между игроками. Рынок будет только из живых людей, без ботов, поэтому он появится вместе с сервером.</p>
+      <div class="panel-head"><h2>Рынок</h2><button class="pill btn small" id="mListBtn">Выставить номер</button></div>
+      <div class="seg" id="mTabs"><button data-mt="buy" class="on">Купить</button><button data-mt="mine">Мои лоты</button></div>
+      <div class="quick" id="mTiers"></div>
+      <p class="muted" id="mNote"></p>
+      <ul class="list" id="mList"></ul>
     </section>
 
     <section id="view-friends" class="panel" data-view hidden>
       <h2>Друзья</h2>
-      <p class="muted">Отправь другу ссылку на игру. Награды за приглашения появятся с бэкендом.</p>
+      <div class="stats" id="friendStats"></div>
+      <p class="muted" id="friendRules"></p>
       <button class="pill btn wide" id="inviteBtn">Пригласить друга</button>
+      <ul class="list" id="friendList"></ul>
     </section>
 
     <section id="view-more" class="panel" data-view hidden>
@@ -79,6 +84,7 @@
       <div class="menu">
         <button class="menu-item" id="dailyBtn"><span class="mi-ic gift" aria-hidden="true">🎁</span><span class="mi-t"><b>Ежедневный бонус</b><small id="dailySub"></small></span><i class="mi-go" aria-hidden="true">›</i></button>
         <button class="menu-item" id="atlasBtn"><span class="mi-ic gift" aria-hidden="true">🗺️</span><span class="mi-t"><b>Атлас России</b><small id="atlasSub"></small></span><i class="mi-go" aria-hidden="true">›</i></button>
+        <button class="menu-item" id="topBtn"><span class="mi-ic gift" aria-hidden="true">🏆</span><span class="mi-t"><b>Рейтинг</b><small>Богатство и уровень игроков</small></span><i class="mi-go" aria-hidden="true">›</i></button>
         <button class="menu-item" id="settingsBtn"><span class="mi-ic gear" aria-hidden="true">⚙️</span><span class="mi-t"><b>Настройки</b><small id="settingsSub"></small></span><i class="mi-go" aria-hidden="true">›</i></button>
         <button class="menu-item" id="inviteBtn2"><span class="mi-ic friends" aria-hidden="true">👥</span><span class="mi-t"><b>Пригласить друга</b><small>Отправь ссылку на игру</small></span><i class="mi-go" aria-hidden="true">›</i></button>
       </div>
@@ -109,6 +115,28 @@
   <h2>Магазин</h2>
   <ul class="list" id="shopList"></ul>
   <button class="pill btn wide" id="shopClose">Закрыть</button>
+</dialog>
+
+<dialog id="topSheet" class="sheet">
+  <div class="grab"></div>
+  <h2>Рейтинг</h2>
+  <div class="seg" id="topTabs"><button data-board="wealth" class="on">Богатство</button><button data-board="level">Уровень</button></div>
+  <ul class="list rows" id="topList"></ul>
+  <p class="muted center small" id="topMe"></p>
+  <button class="pill btn wide" id="topClose">Закрыть</button>
+</dialog>
+
+<dialog id="mSellSheet" class="sheet">
+  <div class="grab"></div>
+  <h2>Выставить номер</h2>
+  <p class="muted center small" id="mSellHint"></p>
+  <ul class="list rows" id="mSellList"></ul>
+  <div class="craft-bar">
+    <div class="quick" id="mPriceChips"></div>
+    <input class="price-in" id="mPriceIn" type="number" inputmode="numeric" placeholder="Своя цена, ₽">
+    <p class="muted center small" id="mSellQuote">Выбери номер из списка</p>
+    <button class="pill btn wide go" id="mSellGo" disabled>Выставить</button>
+  </div>
 </dialog>
 
 <dialog id="atlasSheet" class="sheet">
@@ -188,6 +216,6 @@
 </dialog>
 <div class="toast" id="toast" role="status"></div>
 
-<script type="module" src="js/main.js?v=mw1nrftu"></script>
+<script type="module" src="js/main.js?v=mw2mfvzf"></script>
 </body>
 </html>

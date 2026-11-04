@@ -1,4 +1,4 @@
-import { CONFIG, TIERS, DIGIT_BONUS, codesOf } from './config.js?v=mw1nrftu';
+import { CONFIG, TIERS, DIGIT_BONUS, codesOf } from './config.js?v=mw2mfvzf';
 
 const rand = (a, b) => a + Math.random() * (b - a);
 const dig = () => Math.floor(Math.random() * 10);

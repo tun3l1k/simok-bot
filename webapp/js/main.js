@@ -1,11 +1,11 @@
-import { CONFIG, CRAFT, AUTO_SELL, BETS, COUNTRIES, OPERATORS, SHOP_ITEMS, TIERS } from './config.js?v=mw1nrftu';
-import { formatPhone, formatMoney, formatMult } from './generator.js?v=mw1nrftu';
-import { load, save, fresh, sanitize } from './state.js?v=mw1nrftu';
-import * as game from './game.js?v=mw1nrftu';
-import * as ui from './ui.js?v=mw1nrftu';
-import { $ } from './ui.js?v=mw1nrftu';
-import { api, isRemote, net } from './remote.js?v=mw1nrftu';
-import { initTelegram, haptic, hapticDone, shareText, inviteLink } from './telegram.js?v=mw1nrftu';
+import { CONFIG, CRAFT, AUTO_SELL, BETS, COUNTRIES, OPERATORS, SHOP_ITEMS, TIERS } from './config.js?v=mw2mfvzf';
+import { formatPhone, formatMoney, formatMult } from './generator.js?v=mw2mfvzf';
+import { load, save, fresh, sanitize } from './state.js?v=mw2mfvzf';
+import * as game from './game.js?v=mw2mfvzf';
+import * as ui from './ui.js?v=mw2mfvzf';
+import { $ } from './ui.js?v=mw2mfvzf';
+import { api, isRemote, net } from './remote.js?v=mw2mfvzf';
+import { initTelegram, haptic, hapticDone, shareText, inviteLink } from './telegram.js?v=mw2mfvzf';
 
 initTelegram();
 // Режим сервера: игру считает Cloudflare Worker, здесь только показ. Без API_URL или вне Telegram играем локально.
@@ -99,6 +99,7 @@ async function onSpin() {
   if (res.luck20Earned) notes.push(`🍀 Удача x${CONFIG.LUCK20_BEST_OF} готова: следующая крутка выберет лучший из ${CONFIG.LUCK20_BEST_OF}`);
   else if (res.luckEarned) notes.push('🍀 Удача x2 готова: следующая крутка выберет лучший из двух');
   notes.push(...foundNotes(res.found));
+  if (out.refBonus) notes.push(`🎁 Бонус за приглашение: +${formatMoney(out.refBonus)}`);
   if (notes.length) ui.toast(notes.join('\n'));
   busy = false;
 }
@@ -214,7 +215,7 @@ $('collectionList').onclick = (e) => {
 
 const goView = (e) => {
   const go = e.target.closest('button')?.dataset.go;
-  if (go) ui.showView(go);
+  if (go) { ui.showView(go); onView(go); }
 };
 $('nav').onclick = goView;
 $('seg').onclick = goView;
@@ -273,6 +274,109 @@ $('craftGo').onclick = async () => {
   else if (fn.length) ui.toast(fn.join('\n'));
   openDetail(res.item, 'Слияние');
 };
+
+// ---------- Онлайн-разделы: рынок, друзья, рейтинг (нужен сервер) ----------
+const needOnline = () => { if (remote) return false; ui.toast('Это работает, когда игра открыта в Telegram'); return true; };
+const market = { tab: 'buy', tier: null, data: null };
+async function loadMarket() {
+  if (!remote) { $('mList').innerHTML = '<li class="empty">Рынок работает, когда игра открыта в Telegram.</li>'; return; }
+  ui.renderMarket(market.data, market.tab, market.tier);
+  const out = await api('market', state, { tier: market.tier ?? undefined });
+  if (out.error) { ui.toast(out.error); return; }
+  market.data = out;
+  ui.renderMarket(market.data, market.tab, market.tier);
+}
+let friends = null;
+async function loadFriends() {
+  ui.renderFriends(state, friends);
+  if (!remote) return;
+  const out = await api('friends', state);
+  if (!out.error) { friends = out; ui.renderFriends(state, friends); }
+}
+function onView(v) {
+  if (v === 'market') loadMarket();
+  if (v === 'friends') loadFriends();
+}
+
+$('mTabs').onclick = (e) => {
+  const t = e.target.closest('[data-mt]')?.dataset.mt;
+  if (!t) return;
+  market.tab = t; haptic();
+  ui.renderMarket(market.data, market.tab, market.tier);
+};
+$('mTiers').onclick = (e) => {
+  const b = e.target.closest('[data-mtier]');
+  if (!b) return;
+  market.tier = b.dataset.mtier === '' ? null : Number(b.dataset.mtier);
+  market.data = null; haptic();
+  loadMarket();
+};
+$('mList').onclick = async (e) => {
+  const buyId = e.target.dataset?.buy, cancelId = e.target.dataset?.cancel;
+  if (!buyId && !cancelId) {
+    const lid = e.target.closest('[data-detail-l]')?.dataset.detailL;
+    const l = [...(market.data?.listings ?? []), ...(market.data?.mine ?? [])].find((x) => String(x.id) === lid);
+    if (l) openDetail(l.item, 'Лот на рынке');
+    return;
+  }
+  if (busy) return;
+  const l = [...(market.data?.listings ?? []), ...(market.data?.mine ?? [])].find((x) => String(x.id) === (buyId ?? cancelId));
+  if (buyId && !confirm(`Купить ${formatPhone(l.item)} за ${formatMoney(l.price)}?`)) return;
+  busy = true;
+  const out = await act(buyId ? 'mbuy' : 'mcancel', { id: Number(buyId ?? cancelId) }, null);
+  busy = false;
+  renderAll();
+  if (out.error) ui.toast(out.error); else { ui.toast(buyId ? `Куплено за ${formatMoney(out.bought.price)}` : 'Номер вернулся в коллекцию'); hapticDone(); }
+  loadMarket();
+};
+
+// Выставить номер
+const sell = { id: null, price: NaN };
+const sellRender = () => ui.renderSellSheet(state, sell.id, sell.price);
+const setPrice = (p) => { sell.price = p; $('mPriceIn').value = Number.isFinite(p) ? p : ''; sellRender(); };
+$('mListBtn').onclick = () => {
+  if (needOnline()) return;
+  sell.id = null; sell.price = NaN; $('mPriceIn').value = '';
+  sellRender(); $('mSellSheet').showModal();
+};
+$('mSellList').onclick = (e) => {
+  const id = e.target.closest('[data-msell]')?.dataset.msell;
+  const it = state.collection.find((x) => x.id === id);
+  if (!it) return;
+  sell.id = id; haptic();
+  setPrice(Math.round(it.price * 1.5));
+};
+$('mPriceChips').onclick = (e) => {
+  const m = Number(e.target.closest('[data-mmult]')?.dataset.mmult);
+  const it = state.collection.find((x) => x.id === sell.id);
+  if (m && it) { haptic(); setPrice(Math.round(it.price * m)); }
+};
+$('mPriceIn').oninput = () => { sell.price = Number($('mPriceIn').value) || NaN; sellRender(); };
+$('mSellGo').onclick = async () => {
+  if (busy) return;
+  busy = true;
+  const out = await act('mlist', { id: sell.id, price: sell.price }, null);
+  busy = false;
+  renderAll();
+  if (out.error) { ui.toast(out.error); sellRender(); return; }
+  $('mSellSheet').close();
+  ui.toast('Номер выставлен на рынок'); hapticDone();
+  market.tab = 'mine';
+  ui.showView('market');
+  loadMarket();
+};
+
+// Рейтинг
+let topBoard = 'wealth';
+async function loadTop() {
+  ui.renderTop(null, topBoard);
+  const out = await api('top', state, { board: topBoard });
+  if (out.error) { ui.toast(out.error); return; }
+  ui.renderTop(out, topBoard);
+}
+$('topBtn').onclick = () => { if (needOnline()) return; $('topSheet').showModal(); loadTop(); };
+$('topClose').onclick = () => $('topSheet').close();
+$('topTabs').onclick = (e) => { const b = e.target.closest('[data-board]')?.dataset.board; if (b) { topBoard = b; haptic(); loadTop(); } };
 
 const invite = () => shareText('Крути SIM-карты и собирай красивые номера', inviteLink(CONFIG.BOT_USERNAME));
 $('inviteBtn').onclick = invite;

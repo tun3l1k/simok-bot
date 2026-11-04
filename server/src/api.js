@@ -4,7 +4,18 @@ import { verifyInitData } from './auth.js';
 import * as game from './shared/game.js';
 import { fresh, applySettings } from './shared/state.js';
 import { loadOrCreate, savePlayer } from './players.js';
-import { CRAFT } from './shared/config.js';
+import * as social from './social.js';
+import * as market from './market.js';
+import { CRAFT, CONFIG } from './shared/config.js';
+
+// Сообщение игроку от бота (если он писал боту и не заблокировал его)
+async function tell(env, store, userId, text) {
+  try {
+    const u = await store.get(userId);
+    if (!u?.started || u.blocked) return;
+    await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: userId, text }) });
+  } catch { /* уведомление не критично */ }
+}
 
 const MAX_BODY = 8 * 1024;
 
@@ -55,6 +66,16 @@ const ACTIONS = {
   },
 };
 
+// Действия, которым нужна база целиком (друзья, рейтинг, рынок)
+const ASYNC = {
+  friends: (c) => social.friends(c.db, c.userId),
+  top: (c) => social.top(c.db, c.userId, c.body.board),
+  market: (c) => market.browse(c.db, c.userId, c.body),
+  mlist: (c) => market.list(c.db, c.userId, c.body, c.now),
+  mcancel: (c) => market.cancel(c.db, c.userId, c.body, c.now),
+  mbuy: (c) => market.buy(c.db, c.userId, c.body, c.now, c.notify),
+};
+
 // Читает игрока, применяет действие и пишет обратно. При гонке повторяет с свежими данными.
 export async function runAction(db, userId, action, body, now = Date.now()) {
   for (let attempt = 0; attempt < 4; attempt++) {
@@ -78,7 +99,7 @@ export async function handleApi(request, env, { store, db, now = Date.now(), wai
   const cors = corsHeaders(env, request);
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
   const action = new URL(request.url).pathname.replace(/^\/api\//, '');
-  if (request.method !== 'POST' || !Object.hasOwn(ACTIONS, action)) return reply({ error: 'Не найдено' }, 404, cors);
+  if (request.method !== 'POST' || !(Object.hasOwn(ACTIONS, action) || Object.hasOwn(ASYNC, action))) return reply({ error: 'Не найдено' }, 404, cors);
 
   const text = await request.text();
   if (text.length > MAX_BODY) return reply({ error: 'Слишком большой запрос' }, 413, cors);
@@ -96,7 +117,23 @@ export async function handleApi(request, env, { store, db, now = Date.now(), wai
   // запись «был в игре» не задерживает ответ игроку
   const touching = store.touch(who.user, { ref });
   if (waitUntil) waitUntil(touching.catch(() => {}));
-  const out = await runAction(db, who.user.id, action, body, now);
+  let out;
+  if (Object.hasOwn(ASYNC, action)) {
+    const notify = waitUntil && env.BOT_TOKEN ? (sellerId, text) => waitUntil(tell(env, store, sellerId, text)) : null;
+    try {
+      out = await ASYNC[action]({ db, userId: who.user.id, body, now, notify });
+    } catch (e) {
+      const msg = /no such table/i.test(String(e?.message)) ? 'Раздел ещё настраивается: нужно обновить базу (миграция 0002)' : 'Ошибка сервера, попробуй ещё раз';
+      return reply({ error: msg }, 200, cors);
+    }
+  } else {
+    out = await runAction(db, who.user.id, action, body, now);
+    // друг прокрутил достаточно: награда ему и пригласившему (один раз)
+    if (out.state && !out.state.refPaid && out.state.stats.spins >= CONFIG.REF.SPINS) {
+      const paid = await social.payReferral(db, store, who.user.id, now);
+      if (paid) { out.state = paid.state; if (paid.bonus) out.refBonus = paid.bonus; }
+    }
+  }
   if (!waitUntil) await touching;
   out.ms = Date.now() - started;
   return reply(out, out.busy ? 503 : 200, cors);

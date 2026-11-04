@@ -1,7 +1,7 @@
-import { skinOf } from './skins.js?v=mw1nrftu';
-import { CONFIG, CRAFT, TIERS, OPERATORS, AUTO_SELL, BETS, COUNTRIES, SHOP_ITEMS, DIGIT_BONUS, DISTRICTS, CITIES, CITY_BY_NAME, ATLAS, rankOf, xpForLevel } from './config.js?v=mw1nrftu';
-import { formatPhone, formatMoney, formatMult } from './generator.js?v=mw1nrftu';
-import { collectionValue, currentBet, spinCost, operatorOf, luckBestOf, luckLeft, luck20Left, albumSize, albumFound, craftQuote, citiesOpened, districtProgress } from './game.js?v=mw1nrftu';
+import { skinOf } from './skins.js?v=mw2mfvzf';
+import { CONFIG, CRAFT, TIERS, OPERATORS, AUTO_SELL, BETS, COUNTRIES, SHOP_ITEMS, DIGIT_BONUS, DISTRICTS, CITIES, CITY_BY_NAME, ATLAS, rankOf, xpForLevel } from './config.js?v=mw2mfvzf';
+import { formatPhone, formatMoney, formatMult } from './generator.js?v=mw2mfvzf';
+import { collectionValue, currentBet, spinCost, operatorOf, luckBestOf, luckLeft, luck20Left, albumSize, albumFound, craftQuote, citiesOpened, districtProgress } from './game.js?v=mw2mfvzf';
 
 export const countryOf = (s) => COUNTRIES.find((c) => c.id === s.country) ?? COUNTRIES[0];
 
@@ -345,4 +345,72 @@ export function showDiscovery(f) {
   if (!el.open) el.show();
   clearTimeout(popTimer);
   popTimer = setTimeout(() => el.close(), d.done || f.all ? 4200 : 2600);
+}
+
+// ---------- Рынок, друзья, рейтинг ----------
+const tierName = (t) => TIERS[t]?.name ?? '';
+const itemMeta = (it) => `${tierName(it.tier)}${it.series ? ` · «${it.series.name}»` : ''} · ${it.city}`;
+
+export function renderMarket(data, tab, tierFilter) {
+  const mine = tab === 'mine';
+  const chips = [{ t: null, n: 'Все' }, ...TIERS.map((t, i) => ({ t: i, n: t.name }))];
+  $('mTiers').hidden = mine;
+  $('mTiers').innerHTML = chips.map((c) => `<button data-mtier="${c.t ?? ''}" style="--tier:${c.t === null ? '#888' : TIERS[c.t].color};${c.t === tierFilter ? 'background:#3a2f52' : ''}">${c.n}</button>`).join('');
+  document.querySelectorAll('#mTabs button').forEach((b) => b.classList.toggle('on', b.dataset.mt === tab));
+  if (!data) { $('mList').innerHTML = '<li class="empty">Загружаю…</li>'; $('mNote').textContent = ''; return; }
+  const rows = mine ? data.mine : data.listings;
+  $('mNote').textContent = mine ? `Комиссия ${Math.round(data.fee * 100)}% берётся при продаже. Лотов: ${data.mine.length} из ${CONFIG.MARKET.MAX_LISTINGS}` : `Цены игроков: от 100% до ${CONFIG.MARKET.MAX_MULT * 100}% стоимости номера. Комиссию платит продавец.`;
+  $('mList').innerHTML = rows.length ? rows.map((r) => {
+    const it = r.item;
+    const deal = r.price <= it.price ? ' · выгодно' : '';
+    return `<li class="item" data-detail-l="${r.id}" style="--tier:${TIERS[it.tier].color}">
+      <div><div class="num">${formatPhone(it)}</div>
+      <div class="meta">${itemMeta(it)}<br>${mine ? `оценка ${formatMoney(it.price)}` : `${r.seller} · оценка ${formatMoney(it.price)}${deal}`}</div></div>
+      <div class="right"><b>${formatMoney(r.price)}</b>${mine ? `<button class="sell" data-cancel="${r.id}">Снять</button>` : r.mine ? '<span class="tag">твой</span>' : `<button class="sell" data-buy="${r.id}">Купить</button>`}</div>
+    </li>`;
+  }).join('') : `<li class="empty">${mine ? 'Лотов нет. Нажми «Выставить номер».' : 'Лотов пока нет. Выстави первый номер сам.'}</li>`;
+}
+
+export function renderSellSheet(s, sel, price) {
+  const items = [...s.collection].sort((a, b) => b.price - a.price);
+  const it = s.collection.find((x) => x.id === sel);
+  $('mSellHint').textContent = `Цена от 100% до ${CONFIG.MARKET.MAX_MULT * 100}% стоимости номера. Комиссия ${Math.round(CONFIG.MARKET.FEE * 100)}% с продажи.`;
+  $('mSellList').innerHTML = items.length ? items.map((x) => `<li><button class="row${x.id === sel ? ' on sel' : ''}" data-msell="${x.id}" style="--tier:${TIERS[x.tier].color}">
+      <span class="row-text"><b class="row-title" style="font-size:16px">${formatPhone(x)}</b><small>${itemMeta(x)}</small></span>
+      <span class="row-price">${formatMoney(x.price)}</span><i class="tick" aria-hidden="true"></i></button></li>`).join('')
+    : '<li class="empty" style="padding:14px 16px">В коллекции пусто.</li>';
+  const mults = [1, 1.5, 2, CONFIG.MARKET.MAX_MULT];
+  $('mPriceChips').innerHTML = it ? mults.map((m) => `<button data-mmult="${m}" style="--tier:#ff8a1f">×${String(m).replace('.', ',')}</button>`).join('') : '';
+  $('mPriceIn').hidden = !it;
+  const go = $('mSellGo');
+  if (!it) { $('mSellQuote').textContent = 'Выбери номер из списка'; go.disabled = true; return; }
+  const lo = Math.ceil(it.price * CONFIG.MARKET.MIN_MULT), hi = Math.floor(it.price * CONFIG.MARKET.MAX_MULT);
+  const ok = Number.isFinite(price) && price >= lo && price <= hi;
+  const fee = Math.ceil((price || 0) * CONFIG.MARKET.FEE);
+  $('mSellQuote').innerHTML = ok ? `Цена ${formatMoney(price)} · получишь ${formatMoney(price - fee)} (комиссия ${formatMoney(fee)})` : `Цена от ${formatMoney(lo)} до ${formatMoney(hi)}`;
+  go.disabled = !ok;
+  go.textContent = ok ? `Выставить за ${formatMoney(price)}` : 'Выставить';
+}
+
+export function renderFriends(s, data) {
+  const R = CONFIG.REF;
+  $('friendStats').innerHTML =
+    `<div class="stat"><span aria-hidden="true">👥</span><b>${s.refCount}</b><small>друзей засчитано</small></div>` +
+    `<div class="stat"><span aria-hidden="true">💰</span><b>${formatMoney(s.refEarned)}</b><small>заработано</small></div>`;
+  $('friendRules').textContent = `Друг получает ${formatMoney(R.INVITEE)}, ты ${formatMoney(R.INVITER)} и заряд Удачи 🍀, когда он прокрутит ${R.SPINS} раз.`;
+  if (!data) { $('friendList').innerHTML = ''; return; }
+  $('friendList').innerHTML = data.friends.length ? data.friends.map((f) => `<li class="item" style="--tier:${f.paid ? '#3ddc84' : '#666'}">
+      <div><div class="num">${escH(f.name)}</div><div class="meta">${new Date(f.joined).toLocaleDateString('ru-RU')}</div></div>
+      <div class="right"><span class="${f.paid ? 'fr-ok' : 'muted'}">${f.paid ? 'засчитан ✓' : `играет, до ${R.SPINS} круток`}</span></div></li>`).join('')
+    : '<li class="empty">Пока никого. Отправь ссылку другу.</li>';
+}
+
+export function renderTop(data, board) {
+  document.querySelectorAll('#topTabs button').forEach((b) => b.classList.toggle('on', b.dataset.board === board));
+  if (!data) { $('topList').innerHTML = '<li class="empty" style="padding:14px 16px">Загружаю…</li>'; $('topMe').textContent = ''; return; }
+  $('topList').innerHTML = data.top.map((r) => `<li><div class="row top-row${r.me ? ' me' : ''}">
+      <span class="place">${r.place <= 3 ? ['🥇', '🥈', '🥉'][r.place - 1] : r.place}</span>
+      <span class="row-text"><b class="row-title" style="color:#fff;font-size:16px">${escH(r.name)}</b><small>уровень ${r.level}</small></span>
+      <span class="row-price">${r.score === null ? `ур. ${r.level}` : formatMoney(r.score)}</span></div></li>`).join('');
+  $('topMe').textContent = data.me ? `Твоё место: ${data.me.rank}` : '';
 }

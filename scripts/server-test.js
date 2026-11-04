@@ -24,7 +24,7 @@ class Stmt {
 }
 function newDb() {
   const raw = new DatabaseSync(':memory:');
-  raw.exec(readFileSync(new URL('../server/migrations/0001_init.sql', import.meta.url), 'utf8'));
+  for (const f of ['0001_init.sql', '0002_market.sql']) raw.exec(readFileSync(new URL(`../server/migrations/${f}`, import.meta.url), 'utf8'));
   return { prepare: (sql) => new Stmt(raw, sql) };
 }
 
@@ -183,6 +183,83 @@ assert.equal(await s3.reachableCount(), 2, 'написал боту снова: 
   assert.match(edits.at(-1), /Рассылка завершена\nДоставлено: 6\nЗаблокировали бота: 1/);
   assert.equal(await bs.activeBroadcast(), null);
   assert.equal(await bs.reachableCount(), 6, 'заблокировавший отмечен');
+}
+
+// ---- приглашения, рейтинг, рынок ----
+{
+  const { editPlayer, loadPlayer } = await import('../server/src/players.js');
+  const U2 = { id: 2002, first_name: 'Боря', username: 'borya' };
+  const U3 = { id: 3003, first_name: 'Вера' };
+  const mkItem = (id, price, tier = 1) => ({ id, op: 'mgs', code: '915', city: 'Москва', body: '1234567', price, tier, series: null, digit: null });
+  const give = (id, fn) => editPlayer(db, id, fn);
+
+  // приглашения: друг прокрутил 10 раз, награда обоим и один раз
+  await call('state', { ref: '1001' }, { user: U2 });
+  await give(2002, (st) => { st.balance = 1e6; });
+  const l0 = (await loadPlayer(db, 1001)).state;
+  let paidOut = 0;
+  for (let i = 0; i < CONFIG.REF.SPINS + 3; i++) { const r = await call('spin', {}, { user: U2 }); if (r.refBonus) paidOut += r.refBonus; }
+  assert.equal(paidOut, CONFIG.REF.INVITEE, 'друг получил награду ровно один раз');
+  const inv = (await loadPlayer(db, 1001)).state;
+  assert.equal(inv.balance - l0.balance, CONFIG.REF.INVITER, 'пригласивший получил деньги');
+  assert.equal(inv.luck - l0.luck, CONFIG.REF.LUCK); assert.equal(inv.refCount, 1);
+  const fr = await call('friends');
+  assert.equal(fr.friends.length, 1); assert.equal(fr.friends[0].paid, true);
+  await call('state', { ref: '1001' }, { user: U3 });
+  await give(3003, (st) => { st.balance = 1e6; });
+  for (let i = 0; i < 12; i++) await call('spin', {}, { user: U3 });
+  assert.equal((await loadPlayer(db, 1001)).state.refCount, 2, 'второй друг засчитан');
+
+  // рейтинг
+  const tp = await call('top', { board: 'wealth' });
+  assert.ok(tp.top.length >= 3 && tp.top[0].score >= tp.top[1].score, 'рейтинг отсортирован');
+  assert.ok(tp.me.rank >= 1 && tp.top.every((x) => !('id' in x)), 'место есть, чужие id не отдаём');
+  assert.ok((await call('top', { board: 'level' })).top.length >= 3);
+
+  // рынок
+  await give(1001, (st) => { st.collection = [mkItem('m1', 1000), mkItem('m2', 2000, 2)]; st.balance = 5000; });
+  await give(2002, (st) => { st.collection = []; st.balance = 3000; });
+  let m = await call('mlist', { id: 'm1', price: 500 });
+  assert.match(m.error, /Цена от/, 'дешевле стоимости нельзя'); assert.equal(m.state.collection.length, 2);
+  m = await call('mlist', { id: 'm1', price: 3500 }); assert.match(m.error, /Цена от/, 'дороже трёх стоимостей нельзя');
+  assert.ok((await call('mlist', { id: 'нет', price: 1500 })).error);
+  m = await call('mlist', { id: 'm1', price: 1500 });
+  assert.ok(!m.error && m.state.collection.length === 1, 'лот выставлен, номер ушёл из коллекции');
+  let b = await call('market', {}, { user: U2 });
+  assert.equal(b.listings.length, 1); assert.equal(b.listings[0].price, 1500); assert.equal(b.listings[0].mine, false);
+  assert.equal((await call('market', {})).mine.length, 1, 'свои лоты видны отдельно');
+  const lid = b.listings[0].id;
+  assert.match((await call('mbuy', { id: lid })).error, /твой лот/, 'свой лот не купить');
+  await give(3003, (st) => { st.balance = 10; });
+  assert.match((await call('mbuy', { id: lid }, { user: U3 })).error, /Не хватает/);
+  const sellerBefore = (await loadPlayer(db, 1001)).state.balance;
+  b = await call('mbuy', { id: lid }, { user: U2 });
+  assert.ok(!b.error && b.state.collection.some((x) => x.id === 'm1'), 'покупатель получил номер');
+  assert.equal(b.state.balance, 3000 - 1500);
+  const fee = Math.ceil(1500 * CONFIG.MARKET.FEE);
+  assert.equal((await loadPlayer(db, 1001)).state.balance - sellerBefore, 1500 - fee, 'продавец получил цену за вычетом комиссии');
+  assert.match((await call('mbuy', { id: lid }, { user: U2 })).error, /куплен|снят/, 'второй раз не купить');
+  assert.equal((await call('market', {}, { user: U2 })).listings.length, 0);
+
+  // снять лот
+  await call('mlist', { id: 'm2', price: 2500 });
+  const mine = (await call('market', {})).mine;
+  assert.equal(mine.length, 1);
+  const c = await call('mcancel', { id: mine[0].id });
+  assert.ok(c.state.collection.some((x) => x.id === 'm2'), 'номер вернулся в коллекцию');
+  assert.ok((await call('mcancel', { id: mine[0].id })).error, 'повторно снять нельзя');
+  // параллельная покупка одного лота: сработает только одна
+  await call('mlist', { id: 'm2', price: 2200 });
+  const lot = (await call('market', {})).mine[0].id;
+  await give(3003, (st) => { st.balance = 1e6; }); await give(2002, (st) => { st.balance = 1e6; });
+  const [x, y] = await Promise.all([call('mbuy', { id: lot }, { user: U2 }), call('mbuy', { id: lot }, { user: U3 })]);
+  assert.equal([x, y].filter((r) => !r.error).length, 1, 'один лот купили один раз');
+  // лимит лотов и полная коллекция покупателя
+  await give(1001, (st) => { st.collection = Array.from({ length: 6 }, (_, i) => mkItem('z' + i, 1000)); });
+  for (let i = 0; i < CONFIG.MARKET.MAX_LISTINGS; i++) assert.ok(!(await call('mlist', { id: 'z' + i, price: 1000 })).error);
+  assert.match((await call('mlist', { id: 'z5', price: 1000 })).error, /не больше/);
+  await give(3003, (st) => { st.collection = Array.from({ length: CONFIG.COLLECTION_MAX }, (_, i) => mkItem('f' + i, 100, 0)); st.balance = 1e6; });
+  assert.match((await call('mbuy', { id: (await call('market', {})).mine[0].id }, { user: U3 })).error, /Коллекция полна/);
 }
 
 // ---- админ-меню (grammY заменён заглушкой) ----
