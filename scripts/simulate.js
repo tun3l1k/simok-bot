@@ -67,7 +67,7 @@ console.log(`Любимая цифра 7: бонус у 1 из ${Math.round(N / 
 
 // Слияние: ценность на выходе (номер минус доплата) должна быть ≈ суммы входящих минус комиссия
 console.log(`Слияние (комиссия ${CRAFT.FEE * 100}%): итог = номер − доплата, сравниваем с суммой ${CRAFT.COUNT} номеров`);
-for (let t = 0; t < 4; t++) {
+for (let t = 0; t < BETS.length - 1; t++) {
   const pool = [];
   while (pool.length < 3000) { const it = roll(); if (it.tier === t) pool.push(it); }
   let sumIn = 0, sumOut = 0, fees = 0, K = 4000;

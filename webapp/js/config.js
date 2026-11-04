@@ -1,6 +1,6 @@
 // Все числа экономики и контента живут здесь. Меняй и проверяй: npm run sim
-import { FLAGS } from './flags.js?v=mw15a2uk';
-import { REGISTRY } from './registry.js?v=mw15a2uk';
+import { FLAGS } from './flags.js?v=mw1nrftu';
+import { REGISTRY } from './registry.js?v=mw1nrftu';
 
 export const CONFIG = {
   SAVE_KEY: 'simok_save_v1',
@@ -34,7 +34,7 @@ export const TIERS = [
   { name: 'Редкий',       min: 3000,    color: '#4aa8ff' },
   { name: 'Эпический',    min: 15000,   color: '#b266ff' },
   { name: 'Легендарный',  min: 60000,   color: '#ffb020' },
-  { name: 'Мифический',   min: 250000,  color: '#ff4d6d' },
+  { name: 'Мифический',   min: 120000,  color: '#ff4d6d' },
 ];
 
 // Автопродажа: номера этой редкости и ниже продаются сразу после крутки
@@ -43,6 +43,7 @@ export const AUTO_SELL = [
   { label: 'Обычные', maxTier: 0 },
   { label: 'До Необычных', maxTier: 1 },
   { label: 'До Редких', maxTier: 2 },
+  { label: 'До Эпических', maxTier: 3 },
 ];
 
 // Операторы России: пародии на реальных, чтобы не пересекаться с брендами. Бонусов нет, отличаются только коды и регионы.
@@ -142,6 +143,7 @@ export const BETS = [
   { tier: 2, name: 'Редкий+', cost: 5680, avg: 5680 },
   { tier: 3, name: 'Эпический+', cost: 19100, avg: 19100 },
   { tier: 4, name: 'Легендарный+', cost: 96500, avg: 96500 },
+  { tier: 5, name: 'Мифический+', cost: 134500, avg: 134500 },
 ];
 
 // Страны. Играбельна пока только Россия; операторы каждой страны добавим позже.

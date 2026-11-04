@@ -1,11 +1,11 @@
-import { CONFIG, CRAFT, AUTO_SELL, BETS, COUNTRIES, OPERATORS, SHOP_ITEMS, TIERS } from './config.js?v=mw15a2uk';
-import { formatPhone, formatMoney, formatMult } from './generator.js?v=mw15a2uk';
-import { load, save, fresh, sanitize } from './state.js?v=mw15a2uk';
-import * as game from './game.js?v=mw15a2uk';
-import * as ui from './ui.js?v=mw15a2uk';
-import { $ } from './ui.js?v=mw15a2uk';
-import { api, isRemote, net } from './remote.js?v=mw15a2uk';
-import { initTelegram, haptic, hapticDone, shareText, inviteLink } from './telegram.js?v=mw15a2uk';
+import { CONFIG, CRAFT, AUTO_SELL, BETS, COUNTRIES, OPERATORS, SHOP_ITEMS, TIERS } from './config.js?v=mw1nrftu';
+import { formatPhone, formatMoney, formatMult } from './generator.js?v=mw1nrftu';
+import { load, save, fresh, sanitize } from './state.js?v=mw1nrftu';
+import * as game from './game.js?v=mw1nrftu';
+import * as ui from './ui.js?v=mw1nrftu';
+import { $ } from './ui.js?v=mw1nrftu';
+import { api, isRemote, net } from './remote.js?v=mw1nrftu';
+import { initTelegram, haptic, hapticDone, shareText, inviteLink } from './telegram.js?v=mw1nrftu';
 
 initTelegram();
 // Режим сервера: игру считает Cloudflare Worker, здесь только показ. Без API_URL или вне Telegram играем локально.
